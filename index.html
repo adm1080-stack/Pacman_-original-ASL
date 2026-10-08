@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Pac-Man</title>
+    <title>3D Pac-Man Two-Player</title>
     <style>
         body {
             margin: 0;
@@ -46,11 +46,13 @@
 
         .hud-card {
             background: rgba(0, 0, 0, 0.6);
-            border: 2px solid #ff0;
+            border: 2px solid #333;
             padding: 10px 20px;
             border-radius: 8px;
-            color: #ff0;
         }
+
+        .hud-p1 { border-color: #ff0; color: #ff0; }
+        .hud-p2 { border-color: #f00; color: #f00; }
 
         .overlay {
             position: absolute;
@@ -155,7 +157,8 @@
             display: none !important;
         }
 
-        .highlight-color { color: #ff0; }
+        .p1-color { color: #ff0; }
+        .p2-color { color: #ff4444; }
     </style>
     <!-- Three.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -165,18 +168,22 @@
 
     <div class="ui-layer">
         <div class="hud">
-            <div class="hud-card">
+            <div class="hud-card hud-p1">
+                <div>PLAYER 1</div>
+                <div id="p1-role">Role: Pac-Man</div>
                 <div id="p1-score">Score: 0</div>
             </div>
-            <div class="hud-card">
-                <div id="dots-left">Dots Left: 0</div>
+            <div class="hud-card hud-p2">
+                <div>PLAYER 2</div>
+                <div id="p2-role">Role: Ghosts</div>
+                <div id="p2-score">Score: 0</div>
             </div>
         </div>
     </div>
 
     <!-- Main Menu Overlay -->
     <div id="main-menu" class="overlay">
-        <div class="menu-title">3D Pac-Man</div>
+        <div class="menu-title">3D Pac-Man 2P</div>
         <div class="menu-options">
             <div class="menu-btn selected" data-action="start">Start Game</div>
             <div class="menu-btn" data-action="instructions">Instructions</div>
@@ -188,10 +195,10 @@
         <div class="instructions-panel">
             <h2>Game Instructions</h2>
             <ul>
-                <li><strong>Pac-Man Control:</strong> Use <span class="highlight-color">W, A, S, D</span> or <span class="highlight-color">ARROW KEYS</span> to control Pac-Man's movement.</li>
-                <li><strong>Mouth Animation:</strong> Pac-Man dynamically opens and closes his mouth while moving!</li>
+                <li><strong>Player 1:</strong> Control active character using <span class="p1-color">W (Up), S (Down), A (Left), D (Right)</span>. Switch ghost control by pressing <span class="p1-color">1</span>.</li>
+                <li><strong>Player 2:</strong> Control active character using <span class="p2-color">ARROW KEYS</span>. Switch ghost control by pressing <span class="p2-color">M</span>.</li>
                 <li><strong>Menu Navigation:</strong> UP / DOWN arrows to navigate, ENTER to select. Mouse click green button at bottom-right to select highlighted option.</li>
-                <li><strong>Pause Menu:</strong> Press <span class="highlight-color">SPACE BAR</span> anytime to pause, restart, or exit.</li>
+                <li><strong>Pause Menu:</strong> Press <span class="p1-color">SPACE BAR</span> anytime to pause, restart, or exit.</li>
             </ul>
         </div>
         <div class="menu-options">
@@ -213,7 +220,7 @@
     <div id="game-over-menu" class="overlay hidden">
         <div class="menu-title" id="game-over-title">Game Over</div>
         <div class="instructions-panel" style="text-align: center;">
-            <h3 id="game-result-announcement" style="font-size: 24px;"></h3>
+            <h3 id="winner-announcement" style="color: #0f0; font-size: 24px;"></h3>
             <p id="final-scores"></p>
         </div>
         <div class="menu-options">
@@ -230,56 +237,40 @@
         const GRID_SIZE = 19;
         const CELL_SIZE = 2;
         
-        // 1: Wall, 0: Dot, 2: Empty, 3: Power Pellet
-        const MAP_DATA = [
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
-            [1,3,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,3,1],
-            [1,0,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,0,1],
-            [1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1],
-            [1,1,1,1,0,1,1,1,2,1,2,1,1,1,0,1,1,1,1],
-            [2,2,2,1,0,1,2,2,2,2,2,2,2,1,0,1,2,2,2],
-            [1,1,1,1,0,1,2,1,1,2,1,1,2,1,0,1,1,1,1],
-            [2,2,2,2,0,2,2,1,2,2,2,1,2,2,0,2,2,2,2],
-            [1,1,1,1,0,1,2,1,1,1,1,1,2,1,0,1,1,1,1],
-            [2,2,2,1,0,1,2,2,2,2,2,2,2,1,0,1,2,2,2],
-            [1,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,1],
-            [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1],
-            [1,3,0,1,0,0,0,0,0,2,0,0,0,0,0,1,0,3,1],
-            [1,1,0,1,0,1,0,1,1,1,1,1,0,1,0,1,0,1,1],
-            [1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-        ];
+        // Open field configuration: outer boundary walls only
+        const MAP_DATA = Array.from({ length: 20 }, (_, r) => 
+            Array.from({ length: 19 }, (_, c) => 
+                (r === 0 || r === 19 || c === 0 || c === 18) ? 1 : 0
+            )
+        );
 
         let gameState = 'MENU'; // MENU, INSTRUCTIONS, PLAYING, PAUSED, GAMEOVER
         let scene, camera, renderer;
+        let p1Role = 'PACMAN'; // PACMAN or GHOSTS
+        let p2Role = 'GHOSTS';
 
-        let pacman = { 
-            x: 9, z: 16, 
-            dirX: 0, dirZ: 0, 
-            nextDirX: 0, nextDirZ: 0, 
-            group: null, topMouth: null, bottomMouth: null, 
-            score: 0 
-        };
-
+        let pacman = { x: 9, z: 15, dirX: 0, dirZ: 0, nextDirX: 0, nextDirZ: 0, mesh: null, mouth: null, score: 0 };
         let ghosts = [
-            { id: 0, x: 8, z: 9, color: 0xff0000, dirX: 0, dirZ: -1, mesh: null },
-            { id: 1, x: 9, z: 9, color: 0xffb8ff, dirX: 0, dirZ: 1, mesh: null },
-            { id: 2, x: 10, z: 9, color: 0x00ffff, dirX: 1, dirZ: 0, mesh: null },
-            { id: 3, x: 9, z: 8, color: 0xffb852, dirX: -1, dirZ: 0, mesh: null }
+            { id: 0, x: 8, z: 9, color: 0xff0000, dirX: 0, dirZ: 0, mesh: null, active: true },
+            { id: 1, x: 9, z: 9, color: 0xffb8ff, dirX: 0, dirZ: 0, mesh: null, active: false },
+            { id: 2, x: 10, z: 9, color: 0x00ffff, dirX: 0, dirZ: 0, mesh: null, active: false },
+            { id: 3, x: 9, z: 8, color: 0xffb852, dirX: 0, dirZ: 0, mesh: null, active: false }
         ];
+
+        let p1GhostIdx = 0;
+        let p2GhostIdx = 0;
 
         let dots = [];
         let totalDots = 0;
         let dotsEaten = 0;
 
-        let moveInterval = 220; // ms per grid move
+        let moveInterval = 250; // ms per grid move
         let lastMoveTime = 0;
 
-        // Menu system
+        // Key states
+        const keys = {};
+
+        // --- MENU NAVIGATION SYSTEM ---
         let currentMenuOverlay = document.getElementById('main-menu');
         let selectedMenuIndex = 0;
 
@@ -349,6 +340,8 @@
             scene.background = new THREE.Color(0x050505);
 
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            // Positioning Isometric High-angle camera
             camera.position.set(GRID_SIZE * CELL_SIZE / 2, 35, GRID_SIZE * CELL_SIZE + 10);
             camera.lookAt(GRID_SIZE * CELL_SIZE / 2, 0, GRID_SIZE * CELL_SIZE / 2 - 2);
 
@@ -357,6 +350,7 @@
             renderer.shadowMap.enabled = true;
             container.appendChild(renderer.domElement);
 
+            // Lighting
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
 
@@ -379,7 +373,7 @@
             floor.position.set((GRID_SIZE * CELL_SIZE)/2 - CELL_SIZE/2, -0.5, (MAP_DATA.length * CELL_SIZE)/2 - CELL_SIZE/2);
             scene.add(floor);
 
-            // Walls & Pellets
+            // Outer Boundary Walls & Pellets
             const wallGeo = new THREE.BoxGeometry(CELL_SIZE, 1.2, CELL_SIZE);
             const wallMat = new THREE.MeshStandardMaterial({ color: 0x0000ff, roughness: 0.4 });
 
@@ -406,19 +400,11 @@
                 }
             }
 
-            // Create Animated Pac-Man (Mouth Opening & Closing)
-            pacman.group = new THREE.Group();
-
+            // Pac-Man Creation
+            const pacGeo = new THREE.SphereGeometry(0.8, 16, 16);
             const pacMat = new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.2 });
-            const topGeo = new THREE.SphereGeometry(0.8, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-            const bottomGeo = new THREE.SphereGeometry(0.8, 16, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
-
-            pacman.topMouth = new THREE.Mesh(topGeo, pacMat);
-            pacman.bottomMouth = new THREE.Mesh(bottomGeo, pacMat);
-
-            pacman.group.add(pacman.topMouth);
-            pacman.group.add(pacman.bottomMouth);
-            scene.add(pacman.group);
+            pacman.mesh = new THREE.Mesh(pacGeo, pacMat);
+            scene.add(pacman.mesh);
 
             // Ghosts Creation
             ghosts.forEach(g => {
@@ -433,6 +419,16 @@
 
                 gGroup.add(head);
                 gGroup.add(body);
+
+                // Indicator light/ring
+                const ringGeo = new THREE.RingGeometry(0.8, 1.0, 16);
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.rotation.x = Math.PI/2;
+                ring.position.y = -0.45;
+                ring.name = "indicator";
+                ring.visible = false;
+                gGroup.add(ring);
 
                 scene.add(gGroup);
                 g.mesh = gGroup;
@@ -453,25 +449,22 @@
 
             ghosts.forEach((g, idx) => {
                 g.x = initGPositions[idx].x;
-                g.z = initGPositions[idx].z;
+                g.z = initGPositions[idx].y || initGPositions[idx].z;
                 g.dirX = 0;
-                g.dirZ = -1;
+                g.dirZ = 0;
             });
 
             updateVisualPositions();
         }
 
         function updateVisualPositions() {
-            pacman.group.position.set(pacman.x * CELL_SIZE, 0.3, pacman.z * CELL_SIZE);
-            
-            // Rotate Pac-Man toward movement direction
-            if (pacman.dirX === 1) pacman.group.rotation.y = 0;
-            if (pacman.dirX === -1) pacman.group.rotation.y = Math.PI;
-            if (pacman.dirZ === 1) pacman.group.rotation.y = Math.PI / 2;
-            if (pacman.dirZ === -1) pacman.group.rotation.y = -Math.PI / 2;
-
-            ghosts.forEach((g) => {
+            pacman.mesh.position.set(pacman.x * CELL_SIZE, 0.3, pacman.z * CELL_SIZE);
+            ghosts.forEach((g, idx) => {
                 g.mesh.position.set(g.x * CELL_SIZE, 0.3, g.z * CELL_SIZE);
+                const ind = g.mesh.getObjectByName("indicator");
+                if (ind) {
+                    ind.visible = (p1Role === 'GHOSTS' && p1GhostIdx === idx) || (p2Role === 'GHOSTS' && p2GhostIdx === idx);
+                }
             });
         }
 
@@ -485,8 +478,19 @@
         }
 
         function updateHUD() {
-            document.getElementById('p1-score').innerText = `Score: ${pacman.score}`;
-            document.getElementById('dots-left').innerText = `Dots Left: ${totalDots - dotsEaten}`;
+            document.getElementById('p1-role').innerText = `Role: ${p1Role === 'PACMAN' ? 'Pac-Man' : 'Ghosts'}`;
+            document.getElementById('p2-role').innerText = `Role: ${p2Role === 'PACMAN' ? 'Pac-Man' : 'Ghosts'}`;
+            
+            const pacScore = pacman.score;
+            const ghostScore = dotsEaten * 10; // Simple score for ghosts defending
+
+            if (p1Role === 'PACMAN') {
+                document.getElementById('p1-score').innerText = `Score: ${pacScore}`;
+                document.getElementById('p2-score').innerText = `Score: ${ghostScore}`;
+            } else {
+                document.getElementById('p1-score').innerText = `Score: ${ghostScore}`;
+                document.getElementById('p2-score').innerText = `Score: ${pacScore}`;
+            }
         }
 
         // --- INPUT HANDLING ---
@@ -511,13 +515,42 @@
 
             if (gameState !== 'PLAYING') return;
 
-            // Controlling Pac-Man via WASD or Arrow Keys
-            if (key === 'w' || key === 'W' || key === 'ArrowUp') setPacmanDir(0, -1);
-            if (key === 's' || key === 'S' || key === 'ArrowDown') setPacmanDir(0, 1);
-            if (key === 'a' || key === 'A' || key === 'ArrowLeft') setPacmanDir(-1, 0);
-            if (key === 'd' || key === 'D' || key === 'ArrowRight') setPacmanDir(1, 0);
+            // Player 1 Control: WASD + '1'
+            if (p1Role === 'PACMAN') {
+                if (key === 'w' || key === 'W') setPacmanDir(0, -1);
+                if (key === 's' || key === 'S') setPacmanDir(0, 1);
+                if (key === 'a' || key === 'A') setPacmanDir(-1, 0);
+                if (key === 'd' || key === 'D') setPacmanDir(1, 0);
+            } else { // P1 is Ghosts
+                if (key === 'w' || key === 'W') setGhostDir(p1GhostIdx, 0, -1);
+                if (key === 's' || key === 'S') setGhostDir(p1GhostIdx, 0, 1);
+                if (key === 'a' || key === 'A') setGhostDir(p1GhostIdx, -1, 0);
+                if (key === 'd' || key === 'D') setGhostDir(p1GhostIdx, 1, 0);
+                if (key === '1') {
+                    p1GhostIdx = (p1GhostIdx + 1) % ghosts.length;
+                    updateVisualPositions();
+                }
+            }
+
+            // Player 2 Control: ARROWS + 'm'/'M'
+            if (p2Role === 'PACMAN') {
+                if (key === 'ArrowUp') setPacmanDir(0, -1);
+                if (key === 'ArrowDown') setPacmanDir(0, 1);
+                if (key === 'ArrowLeft') setPacmanDir(-1, 0);
+                if (key === 'ArrowRight') setPacmanDir(1, 0);
+            } else { // P2 is Ghosts
+                if (key === 'ArrowUp') setGhostDir(p2GhostIdx, 0, -1);
+                if (key === 'ArrowDown') setGhostDir(p2GhostIdx, 0, 1);
+                if (key === 'ArrowLeft') setGhostDir(p2GhostIdx, -1, 0);
+                if (key === 'ArrowRight') setGhostDir(p2GhostIdx, 1, 0);
+                if (key === 'm' || key === 'M') {
+                    p2GhostIdx = (p2GhostIdx + 1) % ghosts.length;
+                    updateVisualPositions();
+                }
+            }
         });
 
+        // Green button mouse selection click
         document.getElementById('green-btn').addEventListener('click', () => {
             if (gameState === 'MENU' || gameState === 'INSTRUCTIONS' || gameState === 'PAUSED' || gameState === 'GAMEOVER') {
                 triggerMenuSelection();
@@ -529,6 +562,13 @@
             pacman.nextDirZ = dz;
         }
 
+        function setGhostDir(idx, dx, dz) {
+            if (ghosts[idx]) {
+                ghosts[idx].dirX = dx;
+                ghosts[idx].dirZ = dz;
+            }
+        }
+
         function canMoveTo(x, z) {
             if (z < 0 || z >= MAP_DATA.length || x < 0 || x >= MAP_DATA[0].length) return false;
             return MAP_DATA[z][x] !== 1;
@@ -536,7 +576,7 @@
 
         // --- GAME LOGIC TICK ---
         function gameTick() {
-            // Update Pac-Man direction and position
+            // Update Pacman position
             if (canMoveTo(pacman.x + pacman.nextDirX, pacman.z + pacman.nextDirZ)) {
                 pacman.dirX = pacman.nextDirX;
                 pacman.dirZ = pacman.nextDirZ;
@@ -556,50 +596,52 @@
                 }
             });
 
-            // AI Ghost behavior
-            ghosts.forEach((g) => {
-                const dirs = [{x: 0, z: -1}, {x: 0, z: 1}, {x: -1, z: 0}, {x: 1, z: 0}];
-                const valid = dirs.filter(d => canMoveTo(g.x + d.x, g.z + d.z));
-                
-                if (!canMoveTo(g.x + g.dirX, g.z + g.dirZ) || Math.random() < 0.25) {
+            // Update Ghosts positions
+            ghosts.forEach((g, idx) => {
+                // Basic AI for non-player-controlled directions if standing still
+                if (g.dirX === 0 && g.dirZ === 0) {
+                    const dirs = [{x: 0, z: -1}, {x: 0, z: 1}, {x: -1, z: 0}, {x: 1, z: 0}];
+                    const valid = dirs.filter(d => canMoveTo(g.x + d.x, g.z + d.z));
                     if (valid.length > 0) {
-                        const nextDir = valid[Math.floor(Math.random() * valid.length)];
-                        g.dirX = nextDir.x;
-                        g.dirZ = nextDir.z;
+                        const rDir = valid[Math.floor(Math.random() * valid.length)];
+                        g.dirX = rDir.x;
+                        g.dirZ = rDir.z;
                     }
                 }
 
                 if (canMoveTo(g.x + g.dirX, g.z + g.dirZ)) {
                     g.x += g.dirX;
                     g.z += g.dirZ;
+                } else {
+                    g.dirX = 0;
+                    g.dirZ = 0;
                 }
 
                 // Collision with Pac-Man
                 if (g.x === pacman.x && g.z === pacman.z) {
-                    endGame(false);
+                    endGame(false); // Ghosts win
                 }
             });
 
             if (dotsEaten >= totalDots && totalDots > 0) {
-                endGame(true);
+                endGame(true); // Pac-Man wins
             }
 
             updateVisualPositions();
             updateHUD();
         }
 
-        function endGame(won) {
+        function endGame(pacmanWon) {
             gameState = 'GAMEOVER';
-            const announce = document.getElementById('game-result-announcement');
-            if (won) {
-                announce.innerText = 'You Win!';
-                announce.style.color = '#0f0';
+            let winner = '';
+            if (pacmanWon) {
+                winner = p1Role === 'PACMAN' ? 'Player 1 (Pac-Man) Wins!' : 'Player 2 (Pac-Man) Wins!';
             } else {
-                announce.innerText = 'Game Over - Caught by Ghosts!';
-                announce.style.color = '#f00';
+                winner = p1Role === 'GHOSTS' ? 'Player 1 (Ghosts) Wins!' : 'Player 2 (Ghosts) Wins!';
             }
 
-            document.getElementById('final-scores').innerText = `Final Score: ${pacman.score} | Dots Remaining: ${totalDots - dotsEaten}`;
+            document.getElementById('winner-announcement').innerText = winner;
+            document.getElementById('final-scores').innerText = `Final Score - Pac-Man: ${pacman.score} | Dots Remaining: ${totalDots - dotsEaten}`;
             showOverlay(document.getElementById('game-over-menu'));
         }
 
@@ -609,16 +651,9 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // --- MAIN ANIMATION LOOP ---
+        // --- MAIN LOOP ---
         function animate(timestamp) {
             requestAnimationFrame(animate);
-
-            // Animate Pac-Man's mouth opening and closing
-            const mouthAngle = (Math.sin(timestamp * 0.015) + 1) * 0.25;
-            if (pacman.topMouth && pacman.bottomMouth) {
-                pacman.topMouth.rotation.x = -mouthAngle;
-                pacman.bottomMouth.rotation.x = mouthAngle;
-            }
 
             if (gameState === 'PLAYING') {
                 if (timestamp - lastMoveTime > moveInterval) {
