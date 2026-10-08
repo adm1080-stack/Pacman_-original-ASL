@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Pac-Man Single Player</title>
+    <title>3D Pac-Man</title>
     <style>
         body {
             margin: 0;
@@ -166,7 +166,6 @@
     <div class="ui-layer">
         <div class="hud">
             <div class="hud-card">
-                <div>PLAYER</div>
                 <div id="p1-score">Score: 0</div>
             </div>
             <div class="hud-card">
@@ -557,12 +556,11 @@
                 }
             });
 
-            // AI Ghost behavior (Ghosts pursue or move randomly)
+            // AI Ghost behavior
             ghosts.forEach((g) => {
                 const dirs = [{x: 0, z: -1}, {x: 0, z: 1}, {x: -1, z: 0}, {x: 1, z: 0}];
                 const valid = dirs.filter(d => canMoveTo(g.x + d.x, g.z + d.z));
                 
-                // Keep moving in current direction if possible, otherwise turn randomly
                 if (!canMoveTo(g.x + g.dirX, g.z + g.dirZ) || Math.random() < 0.25) {
                     if (valid.length > 0) {
                         const nextDir = valid[Math.floor(Math.random() * valid.length)];
@@ -578,12 +576,12 @@
 
                 // Collision with Pac-Man
                 if (g.x === pacman.x && g.z === pacman.z) {
-                    endGame(false); // Player lost
+                    endGame(false);
                 }
             });
 
             if (dotsEaten >= totalDots && totalDots > 0) {
-                endGame(true); // Player won
+                endGame(true);
             }
 
             updateVisualPositions();
@@ -616,7 +614,7 @@
             requestAnimationFrame(animate);
 
             // Animate Pac-Man's mouth opening and closing
-            const mouthAngle = (Math.sin(timestamp * 0.015) + 1) * 0.25; // Mouth angle oscillation
+            const mouthAngle = (Math.sin(timestamp * 0.015) + 1) * 0.25;
             if (pacman.topMouth && pacman.bottomMouth) {
                 pacman.topMouth.rotation.x = -mouthAngle;
                 pacman.bottomMouth.rotation.x = mouthAngle;
