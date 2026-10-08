@@ -1,948 +1,691 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ASL Pac-Man 3D - Deaf Culture 2-Player Arcade Edition</title>
-  <style>
-    :root {
-      --bg-color: #0f172a;
-      --maze-wall: #1e40af;
-      --pacman-color: #facc15;
-      --text-color: #f8fafc;
-      --quit-color: #ef4444;
-      --card-bg: rgba(30, 41, 59, 0.85);
-      --card-border: rgba(255, 255, 255, 0.2);
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Pac-Man Two-Player</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            color: #fff;
+        }
 
-    body {
-      margin: 0;
-      padding: 15px;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      user-select: none;
-      min-height: 100vh;
-      box-sizing: border-box;
-    }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
 
-    header {
-      text-align: center;
-      max-width: 500px;
-      margin-bottom: 10px;
-      background: rgba(15, 23, 42, 0.7);
-      padding: 10px 18px;
-      border-radius: 8px;
-      backdrop-filter: blur(5px);
-    }
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-sizing: border-box;
+            padding: 20px;
+        }
 
-    h1 { color: var(--pacman-color); margin: 0 0 5px 0; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
-    p { color: #e2e8f0; font-size: 0.9rem; margin: 0; }
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px #000;
+        }
 
-    #game-container {
-      position: relative;
-      width: 330px;
-      height: 330px;
-      background-color: rgba(0, 0, 0, 0.9);
-      border: 3px solid var(--maze-wall);
-      border-radius: 8px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-      overflow: hidden;
-    }
+        .hud-card {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #333;
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
 
-    canvas { display: block; width: 100%; height: 100%; }
+        .hud-p1 { border-color: #ff0; color: #ff0; }
+        .hud-p2 { border-color: #f00; color: #f00; }
 
-    #webgl-container {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      display: none;
-    }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            z-index: 10;
+        }
 
-    #overlay {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(15, 23, 42, 0.92);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      padding: 15px;
-      box-sizing: border-box;
-      z-index: 10;
-    }
+        .menu-title {
+            font-size: 48px;
+            color: #ff0;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px #ff0;
+        }
 
-    .menu-options {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      width: 85%;
-      margin: 10px 0;
-    }
+        .menu-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 300px;
+        }
 
-    .menu-item {
-      padding: 8px;
-      background: #334155;
-      border: 2px solid transparent;
-      border-radius: 6px;
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 0.88rem;
-    }
+        .menu-btn {
+            background: #111;
+            color: #fff;
+            border: 2px solid #444;
+            padding: 12px 24px;
+            font-size: 20px;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
 
-    .menu-item.selected {
-      border-color: var(--pacman-color);
-      background: #1e293b;
-      color: var(--pacman-color);
-    }
+        .menu-btn.selected {
+            border-color: #ff0;
+            background: #222;
+            color: #ff0;
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+        }
 
-    .instructions-card {
-      display: none;
-      max-height: 180px;
-      overflow-y: auto;
-      text-align: left;
-      font-size: 0.78rem;
-      color: #cbd5e1;
-      background: rgba(15, 23, 42, 0.9);
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid var(--card-border);
-      margin-bottom: 10px;
-    }
+        .green-action-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #0f0;
+            border: none;
+            box-shadow: 0 0 15px #0f0;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #000;
+            font-size: 16px;
+            pointer-events: auto;
+            transition: transform 0.2s, box-shadow 0.2s;
+            z-index: 20;
+        }
 
-    .username-box {
-      margin: 6px 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-      width: 100%;
-    }
+        .green-action-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 25px #0f0;
+        }
 
-    .username-box label { font-size: 0.8rem; color: #cbd5e1; }
-    .username-box input {
-      padding: 5px 8px;
-      border-radius: 4px;
-      border: 1px solid var(--card-border);
-      background-color: #0f172a;
-      color: var(--pacman-color);
-      font-weight: bold;
-      text-align: center;
-      width: 70%;
-      font-size: 0.85rem;
-    }
+        .instructions-panel {
+            background: #111;
+            border: 2px solid #555;
+            padding: 25px;
+            border-radius: 10px;
+            max-width: 600px;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
 
-    .outer-dashboard {
-      width: 330px;
-      margin-top: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
+        .instructions-panel h2 {
+            color: #ff0;
+            margin-top: 0;
+        }
 
-    .stats-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 6px;
-      padding: 10px 14px;
-      font-size: 0.85rem;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-gap: 6px;
-      backdrop-filter: blur(6px);
-    }
+        .instructions-panel ul {
+            text-align: left;
+            padding-left: 20px;
+        }
 
-    .stats-card strong { color: var(--pacman-color); }
+        .hidden {
+            display: none !important;
+        }
 
-    .leaderboard-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 6px;
-      padding: 10px 14px;
-      font-size: 0.85rem;
-      backdrop-filter: blur(6px);
-    }
-
-    .leaderboard-card header {
-      text-align: left;
-      font-weight: bold;
-      color: var(--pacman-color);
-      margin-bottom: 6px;
-      background: none;
-      padding: 0;
-    }
-
-    .leaderboard-list {
-      max-height: 100px;
-      overflow-y: auto;
-      margin: 0;
-      padding-left: 0;
-      list-style-type: none;
-      font-size: 0.8rem;
-      color: #cbd5e1;
-    }
-
-    .leaderboard-list li {
-      display: flex;
-      justify-content: space-between;
-      padding: 3px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .leaderboard-list li:last-child { border-bottom: none; }
-
-    button.btn {
-      background-color: var(--pacman-color);
-      color: #000;
-      border: none;
-      padding: 8px 16px;
-      font-size: 0.9rem;
-      font-weight: bold;
-      border-radius: 5px;
-      cursor: pointer;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    }
-
-    button.btn-green {
-      background-color: #22c55e;
-      color: #fff;
-    }
-
-    button.pause-btn {
-      background-color: var(--quit-color);
-      color: #fff;
-    }
-
-    .fact-banner {
-      width: 330px;
-      min-height: 44px;
-      margin-top: 10px;
-      background-color: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 6px;
-      padding: 8px 10px;
-      box-sizing: border-box;
-      text-align: center;
-      font-size: 0.85rem;
-      color: var(--pacman-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(6px);
-    }
-
-    .controls {
-      margin-top: 12px;
-      display: grid;
-      grid-template-columns: repeat(3, 50px);
-      grid-gap: 5px;
-      justify-content: center;
-    }
-
-    .ctrl-btn {
-      width: 50px;
-      height: 50px;
-      background-color: rgba(51, 65, 85, 0.85);
-      color: var(--text-color);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 6px;
-      font-size: 1.2rem;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(4px);
-    }
-
-    .ctrl-btn:active {
-      background-color: var(--pacman-color);
-      color: #000;
-    }
-
-    .action-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    #camera-indicator {
-      font-size: 0.75rem;
-      color: #38bdf8;
-      margin-top: 4px;
-      font-weight: bold;
-    }
-
-    #green-bottom-btn {
-      position: fixed;
-      bottom: 15px;
-      right: 15px;
-      z-index: 100;
-      border-radius: 50px;
-      padding: 12px 20px;
-    }
-  </style>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+        .p1-color { color: #ff0; }
+        .p2-color { color: #ff4444; }
+    </style>
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+    <div id="canvas-container"></div>
 
-  <header>
-    <h1>ASL Pac-Man 3D</h1>
-    <p>2-Player Arcade Mode: Pac-Man vs. Ghost!</p>
-  </header>
-
-  <div id="game-container">
-    <canvas id="pacmanCanvas" width="330" height="330"></canvas>
-    <div id="webgl-container"></div>
-    
-    <div id="overlay">
-      <h2 id="overlay-title">3D Pac-Man</h2>
-      
-      <div id="menu-view" class="menu-options">
-        <div class="menu-item selected" onclick="selectMenuItem(0)">1. Start Game</div>
-        <div class="menu-item" onclick="selectMenuItem(1)">2. Instructions</div>
-        <div class="menu-item" onclick="selectMenuItem(2)">3. Exit Game</div>
-      </div>
-
-      <div id="instructions-view" class="instructions-card">
-        <strong>🎮 2-Player In-Game Instructions:</strong><br/>
-        • <strong>Player 1</strong>: W(UP), S(DOWN), A(LEFT), D(RIGHT). Toggle Ghosts with <strong>1</strong>.<br/>
-        • <strong>Player 2</strong>: UP, DOWN, LEFT, RIGHT. Toggle Ghosts with <strong>M</strong>.<br/>
-        • <strong>Spacebar</strong>: Pause game anytime (Restart / Exit).<br/>
-        • <strong>Menu Nav</strong>: Arrow Keys (UP/DOWN) & Enter.<br/>
-        • <strong>Green Button</strong>: Select / Confirm at bottom right.
-      </div>
-
-      <div class="username-box" id="username-container">
-        <label for="player-username">Player Name:</label>
-        <input type="text" id="player-username" placeholder="Guest" maxlength="15" />
-      </div>
-
-      <button class="btn btn-green" onclick="confirmMenuSelection()">Confirm Selection (ENTER)</button>
-    </div>
-  </div>
-
-  <div id="camera-indicator">Camera Mode: Isometric Arcade (3D Active)</div>
-
-  <div class="action-row">
-    <button class="btn" onclick="toggle3DView()">🎮 Toggle 2D / 3D</button>
-    <button class="btn" onclick="cycleCameraMode()">🎥 Perspective (ALT+3)</button>
-    <button class="btn pause-btn" onclick="pauseGame()">Pause (SPACE)</button>
-  </div>
-
-  <div class="fact-banner" id="fact-display">
-    P1: WASD (Key 1) | P2: Arrows (Key M) | SPACE: Pause
-  </div>
-
-  <div class="controls">
-    <div></div>
-    <button class="ctrl-btn" onclick="handleTouchMove(0, -1)">▲</button>
-    <div></div>
-    <button class="ctrl-btn" onclick="handleTouchMove(-1, 0)">◀</button>
-    <button class="ctrl-btn" onclick="handleTouchMove(0, 1)">▼</button>
-    <button class="ctrl-btn" onclick="handleTouchMove(1, 0)">▶</button>
-  </div>
-
-  <div class="outer-dashboard">
-    <div class="stats-card">
-      <div><strong>P1 Target:</strong> <span id="stat-p1">PACMAN</span></div>
-      <div><strong>P2 Target:</strong> <span id="stat-p2">GHOST</span></div>
-      <div><strong>Wins:</strong> <span id="stat-wins">0</span></div>
-      <div><strong>Losses:</strong> <span id="stat-losses">0</span></div>
+    <div class="ui-layer">
+        <div class="hud">
+            <div class="hud-card hud-p1">
+                <div>PLAYER 1</div>
+                <div id="p1-role">Role: Pac-Man</div>
+                <div id="p1-score">Score: 0</div>
+            </div>
+            <div class="hud-card hud-p2">
+                <div>PLAYER 2</div>
+                <div id="p2-role">Role: Ghosts</div>
+                <div id="p2-score">Score: 0</div>
+            </div>
+        </div>
     </div>
 
-    <div class="leaderboard-card">
-      <header>🏆 Top 10 High Scores</header>
-      <ol id="leaderboard-list" class="leaderboard-list">
-        <li><span>No scores recorded yet.</span></li>
-      </ol>
+    <!-- Main Menu Overlay -->
+    <div id="main-menu" class="overlay">
+        <div class="menu-title">3D Pac-Man 2P</div>
+        <div class="menu-options">
+            <div class="menu-btn selected" data-action="start">Start Game</div>
+            <div class="menu-btn" data-action="instructions">Instructions</div>
+        </div>
     </div>
-  </div>
 
-  <button id="green-bottom-btn" class="btn btn-green" onclick="confirmMenuSelection()">🟢 Action / Select</button>
+    <!-- Instructions Menu Overlay -->
+    <div id="instructions-menu" class="overlay hidden">
+        <div class="instructions-panel">
+            <h2>Game Instructions</h2>
+            <ul>
+                <li><strong>Player 1:</strong> Control active character using <span class="p1-color">W (Up), S (Down), A (Left), D (Right)</span>. Switch ghost control by pressing <span class="p1-color">1</span>.</li>
+                <li><strong>Player 2:</strong> Control active character using <span class="p2-color">ARROW KEYS</span>. Switch ghost control by pressing <span class="p2-color">M</span>.</li>
+                <li><strong>Menu Navigation:</strong> UP / DOWN arrows to navigate, ENTER to select. Mouse click green button at bottom-right to select highlighted option.</li>
+                <li><strong>Pause Menu:</strong> Press <span class="p1-color">SPACE BAR</span> anytime to pause, restart, or exit.</li>
+            </ul>
+        </div>
+        <div class="menu-options">
+            <div class="menu-btn selected" data-action="back">Back to Menu</div>
+        </div>
+    </div>
 
-  <script>
-    function lerpAngle(start, end, amount) {
-      let shortest = ((((end - start) % (Math.PI * 2)) + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-      return start + shortest * amount;
-    }
+    <!-- Pause Menu Overlay -->
+    <div id="pause-menu" class="overlay hidden">
+        <div class="menu-title">Game Paused</div>
+        <div class="menu-options">
+            <div class="menu-btn selected" data-action="resume">Resume</div>
+            <div class="menu-btn" data-action="restart">Restart</div>
+            <div class="menu-btn" data-action="exit">Exit to Menu</div>
+        </div>
+    </div>
 
-    const canvas = document.getElementById('pacmanCanvas');
-    const ctx = canvas.getContext('2d');
-    const webglContainer = document.getElementById('webgl-container');
-    const overlay = document.getElementById('overlay');
-    const overlayTitle = document.getElementById('overlay-title');
-    const menuView = document.getElementById('menu-view');
-    const instructionsView = document.getElementById('instructions-view');
-    const factDisplay = document.getElementById('fact-display');
-    const usernameInput = document.getElementById('player-username');
-    const cameraIndicator = document.getElementById('camera-indicator');
+    <!-- Game Over Overlay -->
+    <div id="game-over-menu" class="overlay hidden">
+        <div class="menu-title" id="game-over-title">Game Over</div>
+        <div class="instructions-panel" style="text-align: center;">
+            <h3 id="winner-announcement" style="color: #0f0; font-size: 24px;"></h3>
+            <p id="final-scores"></p>
+        </div>
+        <div class="menu-options">
+            <div class="menu-btn selected" data-action="restart">Play Again</div>
+            <div class="menu-btn" data-action="exit">Main Menu</div>
+        </div>
+    </div>
 
-    const statP1 = document.getElementById('stat-p1');
-    const statP2 = document.getElementById('stat-p2');
-    const statWins = document.getElementById('stat-wins');
-    const statLosses = document.getElementById('stat-losses');
-    const leaderboardList = document.getElementById('leaderboard-list');
+    <!-- Green Select Button -->
+    <button id="green-btn" class="green-action-btn">SELECT</button>
 
-    const tileSize = 30;
-    const gridCols = 11;
-    const gridRows = 11;
+    <script>
+        // --- GAME CONFIG & GLOBALS ---
+        const GRID_SIZE = 19;
+        const CELL_SIZE = 2;
+        
+        // 1: Wall, 0: Dot, 2: Empty, 3: Power Pellet
+        const MAP_DATA = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+            [1,3,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,3,1],
+            [1,0,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,0,1],
+            [1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1],
+            [1,1,1,1,0,1,1,1,2,1,2,1,1,1,0,1,1,1,1],
+            [2,2,2,1,0,1,2,2,2,2,2,2,2,1,0,1,2,2,2],
+            [1,1,1,1,0,1,2,1,1,2,1,1,2,1,0,1,1,1,1],
+            [2,2,2,2,0,2,2,1,2,2,2,1,2,2,0,2,2,2,2],
+            [1,1,1,1,0,1,2,1,1,1,1,1,2,1,0,1,1,1,1],
+            [2,2,2,1,0,1,2,2,2,2,2,2,2,1,0,1,2,2,2],
+            [1,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1],
+            [1,3,0,1,0,0,0,0,0,2,0,0,0,0,0,1,0,3,1],
+            [1,1,0,1,0,1,0,1,1,1,1,1,0,1,0,1,0,1,1],
+            [1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
 
-    const mapTemplate = [
-      [1,1,1,1,1,1,1,1,1,1,1],
-      [1,2,0,0,0,1,0,0,0,2,1],
-      [1,0,1,1,0,1,0,1,1,0,1],
-      [1,0,1,0,0,0,0,0,1,0,1],
-      [1,0,0,0,1,3,1,0,0,0,1],
-      [1,1,1,0,3,3,3,0,1,1,1],
-      [1,0,0,0,1,3,1,0,0,0,1],
-      [1,0,1,0,0,0,0,0,1,0,1],
-      [1,0,1,1,0,1,0,1,1,0,1],
-      [1,2,0,0,0,1,0,0,0,2,1],
-      [1,1,1,1,1,1,1,1,1,1,1]
-    ];
+        let gameState = 'MENU'; // MENU, INSTRUCTIONS, PLAYING, PAUSED, GAMEOVER
+        let scene, camera, renderer;
+        let p1Role = 'PACMAN'; // PACMAN or GHOSTS
+        let p2Role = 'GHOSTS';
 
-    let currentMap = [];
-    let isRunning = false;
-    let isPaused = false;
-    let score = 0;
-    let is3DMode = true;
-    let gameLoopInterval = null;
+        let pacman = { x: 9, z: 15, dirX: 0, dirZ: 0, nextDirX: 0, nextDirZ: 0, mesh: null, mouth: null, score: 0 };
+        let ghosts = [
+            { id: 0, x: 8, z: 9, color: 0xff0000, dirX: 0, dirZ: 0, mesh: null, active: true },
+            { id: 1, x: 9, z: 9, color: 0xffb8ff, dirX: 0, dirZ: 0, mesh: null, active: false },
+            { id: 2, x: 10, z: 9, color: 0x00ffff, dirX: 0, dirZ: 0, mesh: null, active: false },
+            { id: 3, x: 9, z: 8, color: 0xffb852, dirX: 0, dirZ: 0, mesh: null, active: false }
+        ];
 
-    let selectedMenuIndex = 0;
+        let p1GhostIdx = 0;
+        let p2GhostIdx = 0;
 
-    // Control Mapping: Key 1 toggles P1, Key M toggles P2
-    let p1Control = 'PACMAN'; // 'PACMAN' or 'GHOST'
-    let p2Control = 'GHOST';  // 'GHOST' or 'PACMAN'
+        let dots = [];
+        let totalDots = 0;
+        let dotsEaten = 0;
 
-    let totalWins = parseInt(localStorage.getItem('asl_total_wins')) || 0;
-    let totalLosses = parseInt(localStorage.getItem('asl_total_losses')) || 0;
-    let leaderboard = JSON.parse(localStorage.getItem('asl_leaderboard_top10')) || [];
+        let moveInterval = 250; // ms per grid move
+        let lastMoveTime = 0;
 
-    const aslFacts = [
-      "Fact: ASL has its own grammar and sentence structure!",
-      "Fact: Gently tap a shoulder or wave to get attention.",
-      "Fact: Facial expressions show questions and grammar in ASL.",
-      "Fact: Eye contact is essential during ASL conversation!"
-    ];
+        // Key states
+        const keys = {};
 
-    const pacman = { col: 1, row: 1, dirCol: 1, dirRow: 0 };
-    const ghost = { col: 5, row: 5, dirCol: 0, dirRow: 0 };
+        // --- MENU NAVIGATION SYSTEM ---
+        let currentMenuOverlay = document.getElementById('main-menu');
+        let selectedMenuIndex = 0;
 
-    let powerMode = false;
-    let powerTimer = 0;
-
-    let scene, camera, renderer, pacman3D, ghost3D, pacmanLight;
-    let wallMeshes = [], itemMeshes = [];
-    const cameraModes = ['ISOMETRIC', 'TRACKING', 'FIRST_PERSON', 'TOP_DOWN'];
-    let cameraModeIndex = 0;
-
-    function init3D() {
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x0f172a);
-
-      camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(330, 330);
-      renderer.shadowMap.enabled = true;
-      webglContainer.appendChild(renderer.domElement);
-
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(100, 200, 100);
-      dirLight.castShadow = true;
-      scene.add(dirLight);
-
-      pacmanLight = new THREE.PointLight(0xfacc15, 1, 80);
-      scene.add(pacmanLight);
-
-      build3DMaze();
-      create3DPacman();
-      create3DGhost();
-
-      webglContainer.style.display = 'block';
-      canvas.style.display = 'none';
-
-      animate3D();
-    }
-
-    function build3DMaze() {
-      wallMeshes.forEach(mesh => scene.remove(mesh));
-      itemMeshes.forEach(item => scene.remove(item.mesh));
-      wallMeshes = [];
-      itemMeshes = [];
-
-      for (let r = 0; r < gridRows; r++) {
-        for (let c = 0; c < gridCols; c++) {
-          let tile = currentMap[r][c];
-          let x = (c - gridCols / 2 + 0.5) * 20;
-          let z = (r - gridRows / 2 + 0.5) * 20;
-
-          if (tile === 1) {
-            const wallGeo = new THREE.BoxGeometry(19, 14, 19);
-            const wallMat = new THREE.MeshPhongMaterial({ color: 0x1e40af, specular: 0x38bdf8, shininess: 30 });
-            const wallMesh = new THREE.Mesh(wallGeo, wallMat);
-            wallMesh.position.set(x, 7, z);
-
-            const rimGeo = new THREE.BoxGeometry(19.5, 2, 19.5);
-            const rimMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
-            const rimMesh = new THREE.Mesh(rimGeo, rimMat);
-            rimMesh.position.set(0, 7, 0);
-            wallMesh.add(rimMesh);
-
-            scene.add(wallMesh);
-            wallMeshes.push(wallMesh);
-          } else if (tile === 0) {
-            const handGroup = new THREE.Group();
-            const palm = new THREE.Mesh(
-              new THREE.BoxGeometry(6, 7, 2),
-              new THREE.MeshBasicMaterial({ color: 0xf59e0b })
-            );
-            handGroup.add(palm);
-            handGroup.position.set(x, 5, z);
-            scene.add(handGroup);
-            itemMeshes.push({ mesh: handGroup, row: r, col: c });
-          } else if (tile === 2) {
-            const berry = new THREE.Mesh(
-              new THREE.SphereGeometry(5, 16, 16),
-              new THREE.MeshPhongMaterial({ color: 0xef4444 })
-            );
-            berry.position.set(x, 5, z);
-            scene.add(berry);
-            itemMeshes.push({ mesh: berry, row: r, col: c });
-          }
+        function getVisibleButtons() {
+            if (!currentMenuOverlay) return [];
+            return Array.from(currentMenuOverlay.querySelectorAll('.menu-btn'));
         }
-      }
-    }
 
-    function create3DPacman() {
-      const group = new THREE.Group();
-      const bodyGeo = new THREE.SphereGeometry(8, 32, 32, 0, Math.PI * 1.7);
-      const bodyMat = new THREE.MeshPhongMaterial({ color: 0xfacc15, side: THREE.DoubleSide });
-      const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-      bodyMesh.rotation.x = Math.PI / 2;
-      group.add(bodyMesh);
-
-      pacman3D = group;
-      scene.add(pacman3D);
-    }
-
-    function create3DGhost() {
-      const ghostGroup = new THREE.Group();
-      const headGeo = new THREE.SphereGeometry(7, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-      const ghostMat = new THREE.MeshPhongMaterial({ color: 0xef4444 });
-      const headMesh = new THREE.Mesh(headGeo, ghostMat);
-      
-      const skirtGeo = new THREE.CylinderGeometry(7, 7, 6, 16, 1, true);
-      const skirtMesh = new THREE.Mesh(skirtGeo, ghostMat);
-      skirtMesh.position.y = -3;
-
-      ghostGroup.add(headMesh);
-      ghostGroup.add(skirtMesh);
-
-      ghost3D = ghostGroup;
-      ghost3D.materialRef = ghostMat;
-      scene.add(ghost3D);
-    }
-
-    function update3DPositions() {
-      if (!pacman3D || !ghost3D) return;
-
-      const pX = (pacman.col - gridCols / 2 + 0.5) * 20;
-      const pZ = (pacman.row - gridRows / 2 + 0.5) * 20;
-
-      pacman3D.position.x = THREE.MathUtils.lerp(pacman3D.position.x, pX, 0.3);
-      pacman3D.position.z = THREE.MathUtils.lerp(pacman3D.position.z, pZ, 0.3);
-      pacman3D.position.y = 8;
-
-      pacmanLight.position.set(pacman3D.position.x, 15, pacman3D.position.z);
-
-      let targetYaw = 0;
-      if (pacman.dirCol === 1) targetYaw = 0;
-      else if (pacman.dirCol === -1) targetYaw = Math.PI;
-      else if (pacman.dirRow === 1) targetYaw = Math.PI / 2;
-      else if (pacman.dirRow === -1) targetYaw = -Math.PI / 2;
-
-      pacman3D.rotation.y = lerpAngle(pacman3D.rotation.y, targetYaw, 0.3);
-
-      const gX = (ghost.col - gridCols / 2 + 0.5) * 20;
-      const gZ = (ghost.row - gridRows / 2 + 0.5) * 20;
-
-      ghost3D.position.x = THREE.MathUtils.lerp(ghost3D.position.x, gX, 0.2);
-      ghost3D.position.z = THREE.MathUtils.lerp(ghost3D.position.z, gZ, 0.2);
-      ghost3D.position.y = 8 + Math.sin(Date.now() * 0.005) * 2;
-
-      if (powerMode) ghost3D.materialRef.color.setHex(0x38bdf8);
-      else ghost3D.materialRef.color.setHex(0xef4444);
-
-      itemMeshes.forEach(item => {
-        if (currentMap[item.row][item.col] === 3) {
-          item.mesh.visible = false;
-        } else {
-          item.mesh.rotation.y += 0.05;
+        function updateMenuSelection() {
+            const btns = getVisibleButtons();
+            btns.forEach((btn, idx) => {
+                if (idx === selectedMenuIndex) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
         }
-      });
 
-      updateCameraMode();
-    }
-
-    function updateCameraMode() {
-      const mode = cameraModes[cameraModeIndex];
-      cameraIndicator.innerText = `Camera Mode: ${mode.replace('_', ' ')} (${is3DMode ? '3D Active' : '2D Active'})`;
-
-      if (mode === 'ISOMETRIC') {
-        camera.position.set(0, 200, 180);
-        camera.lookAt(0, -10, 0);
-      } else if (mode === 'TRACKING') {
-        camera.position.set(pacman3D.position.x, 80, pacman3D.position.z + 100);
-        camera.lookAt(pacman3D.position.x, 0, pacman3D.position.z);
-      } else if (mode === 'FIRST_PERSON') {
-        camera.position.set(pacman3D.position.x, 10, pacman3D.position.z);
-        const forwardX = pacman3D.position.x + Math.cos(pacman3D.rotation.y) * 50;
-        const forwardZ = pacman3D.position.z + Math.sin(pacman3D.rotation.y) * 50;
-        camera.lookAt(forwardX, 10, forwardZ);
-      } else if (mode === 'TOP_DOWN') {
-        camera.position.set(0, 240, 1);
-        camera.lookAt(0, 0, 0);
-      }
-    }
-
-    function cycleCameraMode() {
-      cameraModeIndex = (cameraModeIndex + 1) % cameraModes.length;
-    }
-
-    function animate3D() {
-      requestAnimationFrame(animate3D);
-      update3DPositions();
-      if (renderer && scene && camera) {
-        renderer.render(scene, camera);
-      }
-    }
-
-    function toggle3DView() {
-      is3DMode = !is3DMode;
-      if (is3DMode) {
-        webglContainer.style.display = 'block';
-        canvas.style.display = 'none';
-      } else {
-        webglContainer.style.display = 'none';
-        canvas.style.display = 'block';
-      }
-      updateCameraMode();
-    }
-
-    // --- Menu Selection Navigation ---
-    function selectMenuItem(index) {
-      selectedMenuIndex = index;
-      const items = document.querySelectorAll('.menu-item');
-      items.forEach((item, idx) => {
-        if (idx === index) item.classList.add('selected');
-        else item.classList.remove('selected');
-      });
-
-      if (selectedMenuIndex === 1) {
-        instructionsView.style.display = 'block';
-      } else {
-        instructionsView.style.display = 'none';
-      }
-    }
-
-    function confirmMenuSelection() {
-      if (selectedMenuIndex === 0) {
-        startGame();
-      } else if (selectedMenuIndex === 1) {
-        selectMenuItem(0); // Jump back to Start Game
-      } else if (selectedMenuIndex === 2) {
-        overlayTitle.innerText = "Game Exited";
-        menuView.style.display = 'flex';
-        overlay.style.display = 'flex';
-      }
-    }
-
-    function gameStep() {
-      if (!isRunning || isPaused) return;
-
-      // Move Pacman
-      let nextC = pacman.col + pacman.dirCol;
-      let nextR = pacman.row + pacman.dirRow;
-
-      if (currentMap[nextR][nextC] !== 1) {
-        pacman.col = nextC;
-        pacman.row = nextR;
-
-        let currentCell = currentMap[pacman.row][pacman.col];
-        if (currentCell === 0) {
-          currentMap[pacman.row][pacman.col] = 3;
-          score += 10;
-        } else if (currentCell === 2) {
-          currentMap[pacman.row][pacman.col] = 3;
-          score += 50;
-          powerMode = true;
-          powerTimer = 20;
-          factDisplay.innerText = aslFacts[Math.floor(Math.random() * aslFacts.length)];
+        function navigateMenu(dir) {
+            const btns = getVisibleButtons();
+            if (btns.length === 0) return;
+            selectedMenuIndex = (selectedMenuIndex + dir + btns.length) % btns.length;
+            updateMenuSelection();
         }
-      }
 
-      // Move Ghost
-      let gNextC = ghost.col + ghost.dirCol;
-      let gNextR = ghost.row + ghost.dirRow;
-      if (currentMap[gNextR] && currentMap[gNextR][gNextC] !== 1) {
-        ghost.col = gNextC;
-        ghost.row = gNextR;
-      }
-
-      // Power Mode timer decrement
-      if (powerMode) {
-        powerTimer--;
-        if (powerTimer <= 0) powerMode = false;
-      }
-
-      // Collision Check
-      if (pacman.col === ghost.col && pacman.row === ghost.row) {
-        if (powerMode) {
-          ghost.col = 5;
-          ghost.row = 5;
-          score += 200;
-          factDisplay.innerText = "Pac-Man ate the Ghost! 🥶 (+200 pts)";
-        } else {
-          endGame(false);
-          return;
+        function triggerMenuSelection() {
+            const btns = getVisibleButtons();
+            if (btns[selectedMenuIndex]) {
+                const action = btns[selectedMenuIndex].getAttribute('data-action');
+                handleMenuAction(action);
+            }
         }
-      }
 
-      checkWinCondition();
-      render2D();
-    }
-
-    function setEntityDir(entity, dc, dr) {
-      if (entity === 'PACMAN') {
-        if (currentMap[pacman.row + dr][pacman.col + dc] !== 1) {
-          pacman.dirCol = dc;
-          pacman.dirRow = dr;
+        function handleMenuAction(action) {
+            if (action === 'start') {
+                showOverlay(null);
+                startGame();
+            } else if (action === 'instructions') {
+                showOverlay(document.getElementById('instructions-menu'));
+            } else if (action === 'back' || action === 'exit') {
+                showOverlay(document.getElementById('main-menu'));
+                gameState = 'MENU';
+            } else if (action === 'resume') {
+                showOverlay(null);
+                gameState = 'PLAYING';
+            } else if (action === 'restart') {
+                showOverlay(null);
+                startGame();
+            }
         }
-      } else if (entity === 'GHOST') {
-        if (currentMap[ghost.row + dr][ghost.col + dc] !== 1) {
-          ghost.dirCol = dc;
-          ghost.dirRow = dr;
+
+        function showOverlay(overlayElem) {
+            document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
+            currentMenuOverlay = overlayElem;
+            selectedMenuIndex = 0;
+            if (overlayElem) {
+                overlayElem.classList.remove('hidden');
+                updateMenuSelection();
+            }
         }
-      }
-    }
 
-    function handleTouchMove(dc, dr) {
-      setEntityDir(p1Control, dc, dr);
-    }
+        // --- THREE.JS SETUP ---
+        function initThree() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050505);
 
-    function startGame() {
-      if (gameLoopInterval) clearInterval(gameLoopInterval);
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            // Positioning Isometric High-angle camera
+            camera.position.set(GRID_SIZE * CELL_SIZE / 2, 35, GRID_SIZE * CELL_SIZE + 10);
+            camera.lookAt(GRID_SIZE * CELL_SIZE / 2, 0, GRID_SIZE * CELL_SIZE / 2 - 2);
 
-      currentMap = JSON.parse(JSON.stringify(mapTemplate));
-      pacman.col = 1; pacman.row = 1;
-      pacman.dirCol = 1; pacman.dirRow = 0;
-      ghost.col = 5; ghost.row = 5;
-      ghost.dirCol = 0; ghost.dirRow = 0;
-      score = 0;
-      powerMode = false;
-      powerTimer = 0;
-      isPaused = false;
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
 
-      overlay.style.display = 'none';
-      isRunning = true;
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
 
-      if (scene) build3DMaze();
-      render2D();
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(10, 40, 20);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
 
-      gameLoopInterval = setInterval(gameStep, 250);
-    }
+            buildBoard();
 
-    function pauseGame() {
-      if (!isRunning) return;
-
-      isPaused = !isPaused;
-      if (isPaused) {
-        overlayTitle.innerText = "Game Paused";
-        menuView.style.display = 'flex';
-        overlay.style.display = 'flex';
-      } else {
-        overlay.style.display = 'none';
-      }
-    }
-
-    function checkWinCondition() {
-      let itemsRemaining = false;
-      for (let r = 0; r < gridRows; r++) {
-        for (let c = 0; c < gridCols; c++) {
-          if (currentMap[r][c] === 0 || currentMap[r][c] === 2) itemsRemaining = true;
+            window.addEventListener('resize', onWindowResize);
         }
-      }
-      if (!itemsRemaining) endGame(true);
-    }
 
-    function saveScoreToLeaderboard(playerName, finalScore, winningRole) {
-      const entry = {
-        name: playerName || 'Guest',
-        score: finalScore,
-        result: winningRole,
-        date: new Date().toLocaleDateString()
-      };
+        function buildBoard() {
+            // Base floor
+            const floorGeo = new THREE.PlaneGeometry(GRID_SIZE * CELL_SIZE, MAP_DATA.length * CELL_SIZE);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.set((GRID_SIZE * CELL_SIZE)/2 - CELL_SIZE/2, -0.5, (MAP_DATA.length * CELL_SIZE)/2 - CELL_SIZE/2);
+            scene.add(floor);
 
-      leaderboard.push(entry);
-      leaderboard.sort((a, b) => b.score - a.score);
-      leaderboard = leaderboard.slice(0, 10);
+            // Walls & Pellets
+            const wallGeo = new THREE.BoxGeometry(CELL_SIZE, 1.2, CELL_SIZE);
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x0000ff, roughness: 0.4 });
 
-      localStorage.setItem('asl_leaderboard_top10', JSON.stringify(leaderboard));
-    }
+            const dotGeo = new THREE.SphereGeometry(0.2, 8, 8);
+            const dotMat = new THREE.MeshBasicMaterial({ color: 0xffb8ae });
 
-    function render2D() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let r = 0; r < gridRows; r++) {
-        for (let c = 0; c < gridCols; c++) {
-          let tile = currentMap[r][c];
-          let x = c * tileSize;
-          let y = r * tileSize;
+            for (let r = 0; r < MAP_DATA.length; r++) {
+                for (let c = 0; c < MAP_DATA[r].length; c++) {
+                    const val = MAP_DATA[r][c];
+                    const x = c * CELL_SIZE;
+                    const z = r * CELL_SIZE;
 
-          if (tile === 1) {
-            ctx.fillStyle = '#1e40af';
-            ctx.fillRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
-          } else if (tile === 0) {
-            ctx.font = '15px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('✋', x + 15, y + 15);
-          } else if (tile === 2) {
-            ctx.font = '16px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('🍓', x + 15, y + 15);
-          }
+                    if (val === 1) {
+                        const wall = new THREE.Mesh(wallGeo, wallMat);
+                        wall.position.set(x, 0.1, z);
+                        scene.add(wall);
+                    } else if (val === 0) {
+                        const dot = new THREE.Mesh(dotGeo, dotMat);
+                        dot.position.set(x, 0, z);
+                        scene.add(dot);
+                        dots.push({ r, c, mesh: dot });
+                        totalDots++;
+                    }
+                }
+            }
+
+            // Pac-Man Creation
+            const pacGeo = new THREE.SphereGeometry(0.8, 16, 16);
+            const pacMat = new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.2 });
+            pacman.mesh = new THREE.Mesh(pacGeo, pacMat);
+            scene.add(pacman.mesh);
+
+            // Ghosts Creation
+            ghosts.forEach(g => {
+                const gGroup = new THREE.Group();
+                const headGeo = new THREE.SphereGeometry(0.7, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+                const bodyGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.7, 16);
+                const gMat = new THREE.MeshStandardMaterial({ color: g.color, roughness: 0.3 });
+
+                const head = new THREE.Mesh(headGeo, gMat);
+                head.position.y = 0.35;
+                const body = new THREE.Mesh(bodyGeo, gMat);
+
+                gGroup.add(head);
+                gGroup.add(body);
+
+                // Indicator light/ring
+                const ringGeo = new THREE.RingGeometry(0.8, 1.0, 16);
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.rotation.x = Math.PI/2;
+                ring.position.y = -0.45;
+                ring.name = "indicator";
+                ring.visible = false;
+                gGroup.add(ring);
+
+                scene.add(gGroup);
+                g.mesh = gGroup;
+            });
         }
-      }
 
-      ctx.fillStyle = '#facc15';
-      ctx.beginPath();
-      ctx.arc(pacman.col * tileSize + 15, pacman.row * tileSize + 15, 11, 0, Math.PI * 2);
-      ctx.fill();
+        function resetPositions() {
+            pacman.x = 9;
+            pacman.z = 16;
+            pacman.dirX = 0;
+            pacman.dirZ = 0;
+            pacman.nextDirX = 0;
+            pacman.nextDirZ = 0;
 
-      ctx.fillStyle = powerMode ? '#38bdf8' : '#ef4444';
-      ctx.beginPath();
-      ctx.arc(ghost.col * tileSize + 15, ghost.row * tileSize + 15, 11, 0, Math.PI * 2);
-      ctx.fill();
+            const initGPositions = [
+                {x: 8, z: 9}, {x: 9, z: 9}, {x: 10, z: 9}, {x: 9, z: 8}
+            ];
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '12px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(`Score: ${score}`, 10, 15);
-    }
+            ghosts.forEach((g, idx) => {
+                g.x = initGPositions[idx].x;
+                g.z = initGPositions[idx].y || initGPositions[idx].z;
+                g.dirX = 0;
+                g.dirZ = 0;
+            });
 
-    function updateStatsUI() {
-      statP1.innerText = p1Control;
-      statP2.innerText = p2Control;
-      statWins.innerText = totalWins;
-      statLosses.innerText = totalLosses;
-
-      if (leaderboard.length === 0) {
-        leaderboardList.innerHTML = '<li><span>No scores recorded yet.</span></li>';
-      } else {
-        leaderboardList.innerHTML = leaderboard
-          .map((item, index) => `
-            <li>
-              <span><strong>#${index + 1}</strong> ${item.name}</span>
-              <span>${item.score} pts (${item.result})</span>
-            </li>
-          `).join('');
-      }
-    }
-
-    function endGame(pacmanWon) {
-      isRunning = false;
-      if (gameLoopInterval) clearInterval(gameLoopInterval);
-
-      const playerName = usernameInput.value.trim() || 'Guest';
-      let winningPlayer = pacmanWon ? (p1Control === 'PACMAN' ? 'Player 1 (Pac-Man)' : 'Player 2 (Pac-Man)')
-                                    : (p1Control === 'GHOST' ? 'Player 1 (Ghost)' : 'Player 2 (Ghost)');
-
-      if (pacmanWon) {
-        score += 300;
-        totalWins += 1;
-        localStorage.setItem('asl_total_wins', totalWins);
-        saveScoreToLeaderboard(playerName, score, 'PACMAN WIN');
-        overlayTitle.innerText = "🏆 Victory!";
-      } else {
-        totalLosses += 1;
-        localStorage.setItem('asl_total_losses', totalLosses);
-        saveScoreToLeaderboard(playerName, score, 'GHOST WIN');
-        overlayTitle.innerText = "👻 Game Over!";
-      }
-
-      factDisplay.innerText = `Game Over! Winner: ${winningPlayer} | Final Score: ${score}`;
-      updateStatsUI();
-      menuView.style.display = 'flex';
-      overlay.style.display = 'flex';
-    }
-
-    // --- Key Event Listeners ---
-    window.addEventListener('keydown', (e) => {
-      // Menu Navigation Keys (UP / DOWN / ENTER)
-      if (overlay.style.display !== 'none') {
-        if (e.key === 'ArrowUp') {
-          selectMenuItem(Math.max(0, selectedMenuIndex - 1));
-          e.preventDefault();
-        } else if (e.key === 'ArrowDown') {
-          selectMenuItem(Math.min(2, selectedMenuIndex + 1));
-          e.preventDefault();
-        } else if (e.key === 'Enter') {
-          confirmMenuSelection();
-          e.preventDefault();
+            updateVisualPositions();
         }
-      }
 
-      // Spacebar Pause Toggle (Restart / Exit option)
-      if (e.key === ' ' || e.code === 'Space') {
-        pauseGame();
-        e.preventDefault();
-      }
+        function updateVisualPositions() {
+            pacman.mesh.position.set(pacman.x * CELL_SIZE, 0.3, pacman.z * CELL_SIZE);
+            ghosts.forEach((g, idx) => {
+                g.mesh.position.set(g.x * CELL_SIZE, 0.3, g.z * CELL_SIZE);
+                const ind = g.mesh.getObjectByName("indicator");
+                if (ind) {
+                    ind.visible = (p1Role === 'GHOSTS' && p1GhostIdx === idx) || (p2Role === 'GHOSTS' && p2GhostIdx === idx);
+                }
+            });
+        }
 
-      if (e.altKey && e.key === '3') { cycleCameraMode(); e.preventDefault(); }
+        function startGame() {
+            pacman.score = 0;
+            dotsEaten = 0;
+            dots.forEach(d => d.mesh.visible = true);
+            resetPositions();
+            gameState = 'PLAYING';
+            updateHUD();
+        }
 
-      // Target Control Switching:
-      // Player 1 switches with Key '1'
-      if (e.key === '1') {
-        p1Control = (p1Control === 'PACMAN') ? 'GHOST' : 'PACMAN';
-        updateStatsUI();
-      }
-      // Player 2 switches with Key 'M' or 'm'
-      if (e.key === 'm' || e.key === 'M') {
-        p2Control = (p2Control === 'GHOST') ? 'PACMAN' : 'GHOST';
-        updateStatsUI();
-      }
+        function updateHUD() {
+            document.getElementById('p1-role').innerText = `Role: ${p1Role === 'PACMAN' ? 'Pac-Man' : 'Ghosts'}`;
+            document.getElementById('p2-role').innerText = `Role: ${p2Role === 'PACMAN' ? 'Pac-Man' : 'Ghosts'}`;
+            
+            const pacScore = pacman.score;
+            const ghostScore = dotsEaten * 10; // Simple score for ghosts defending
 
-      if (!isRunning || isPaused) return;
+            if (p1Role === 'PACMAN') {
+                document.getElementById('p1-score').innerText = `Score: ${pacScore}`;
+                document.getElementById('p2-score').innerText = `Score: ${ghostScore}`;
+            } else {
+                document.getElementById('p1-score').innerText = `Score: ${ghostScore}`;
+                document.getElementById('p2-score').innerText = `Score: ${pacScore}`;
+            }
+        }
 
-      // Player 1 Controls (WASD)
-      if (e.key === 'w' || e.key === 'W') { setEntityDir(p1Control, 0, -1); e.preventDefault(); }
-      if (e.key === 's' || e.key === 'S') { setEntityDir(p1Control, 0, 1); e.preventDefault(); }
-      if (e.key === 'a' || e.key === 'A') { setEntityDir(p1Control, -1, 0); e.preventDefault(); }
-      if (e.key === 'd' || e.key === 'D') { setEntityDir(p1Control, 1, 0); e.preventDefault(); }
+        // --- INPUT HANDLING ---
+        window.addEventListener('keydown', (e) => {
+            const key = e.key;
 
-      // Player 2 Controls (Arrow Keys)
-      if (e.key === 'ArrowUp') { setEntityDir(p2Control, 0, -1); e.preventDefault(); }
-      if (e.key === 'ArrowDown') { setEntityDir(p2Control, 0, 1); e.preventDefault(); }
-      if (e.key === 'ArrowLeft') { setEntityDir(p2Control, -1, 0); e.preventDefault(); }
-      if (e.key === 'ArrowRight') { setEntityDir(p2Control, 1, 0); e.preventDefault(); }
-    });
+            if (gameState === 'MENU' || gameState === 'INSTRUCTIONS' || gameState === 'PAUSED' || gameState === 'GAMEOVER') {
+                if (key === 'ArrowUp') navigateMenu(-1);
+                if (key === 'ArrowDown') navigateMenu(1);
+                if (key === 'Enter') triggerMenuSelection();
+            }
 
-    currentMap = JSON.parse(JSON.stringify(mapTemplate));
-    updateStatsUI();
-    render2D();
-    init3D();
-  </script>
+            if (key === ' ' || e.code === 'Space') {
+                if (gameState === 'PLAYING') {
+                    gameState = 'PAUSED';
+                    showOverlay(document.getElementById('pause-menu'));
+                } else if (gameState === 'PAUSED') {
+                    gameState = 'PLAYING';
+                    showOverlay(null);
+                }
+            }
+
+            if (gameState !== 'PLAYING') return;
+
+            // Player 1 Control: WASD + '1'
+            if (p1Role === 'PACMAN') {
+                if (key === 'w' || key === 'W') setPacmanDir(0, -1);
+                if (key === 's' || key === 'S') setPacmanDir(0, 1);
+                if (key === 'a' || key === 'A') setPacmanDir(-1, 0);
+                if (key === 'd' || key === 'D') setPacmanDir(1, 0);
+            } else { // P1 is Ghosts
+                if (key === 'w' || key === 'W') setGhostDir(p1GhostIdx, 0, -1);
+                if (key === 's' || key === 'S') setGhostDir(p1GhostIdx, 0, 1);
+                if (key === 'a' || key === 'A') setGhostDir(p1GhostIdx, -1, 0);
+                if (key === 'd' || key === 'D') setGhostDir(p1GhostIdx, 1, 0);
+                if (key === '1') {
+                    p1GhostIdx = (p1GhostIdx + 1) % ghosts.length;
+                    updateVisualPositions();
+                }
+            }
+
+            // Player 2 Control: ARROWS + 'm'/'M'
+            if (p2Role === 'PACMAN') {
+                if (key === 'ArrowUp') setPacmanDir(0, -1);
+                if (key === 'ArrowDown') setPacmanDir(0, 1);
+                if (key === 'ArrowLeft') setPacmanDir(-1, 0);
+                if (key === 'ArrowRight') setPacmanDir(1, 0);
+            } else { // P2 is Ghosts
+                if (key === 'ArrowUp') setGhostDir(p2GhostIdx, 0, -1);
+                if (key === 'ArrowDown') setGhostDir(p2GhostIdx, 0, 1);
+                if (key === 'ArrowLeft') setGhostDir(p2GhostIdx, -1, 0);
+                if (key === 'ArrowRight') setGhostDir(p2GhostIdx, 1, 0);
+                if (key === 'm' || key === 'M') {
+                    p2GhostIdx = (p2GhostIdx + 1) % ghosts.length;
+                    updateVisualPositions();
+                }
+            }
+        });
+
+        // Green button mouse selection click
+        document.getElementById('green-btn').addEventListener('click', () => {
+            if (gameState === 'MENU' || gameState === 'INSTRUCTIONS' || gameState === 'PAUSED' || gameState === 'GAMEOVER') {
+                triggerMenuSelection();
+            }
+        });
+
+        function setPacmanDir(dx, dz) {
+            pacman.nextDirX = dx;
+            pacman.nextDirZ = dz;
+        }
+
+        function setGhostDir(idx, dx, dz) {
+            if (ghosts[idx]) {
+                ghosts[idx].dirX = dx;
+                ghosts[idx].dirZ = dz;
+            }
+        }
+
+        function canMoveTo(x, z) {
+            if (z < 0 || z >= MAP_DATA.length || x < 0 || x >= MAP_DATA[0].length) return false;
+            return MAP_DATA[z][x] !== 1;
+        }
+
+        // --- GAME LOGIC TICK ---
+        function gameTick() {
+            // Update Pacman position
+            if (canMoveTo(pacman.x + pacman.nextDirX, pacman.z + pacman.nextDirZ)) {
+                pacman.dirX = pacman.nextDirX;
+                pacman.dirZ = pacman.nextDirZ;
+            }
+
+            if (canMoveTo(pacman.x + pacman.dirX, pacman.z + pacman.dirZ)) {
+                pacman.x += pacman.dirX;
+                pacman.z += pacman.dirZ;
+            }
+
+            // Check Dot Collision
+            dots.forEach(d => {
+                if (d.mesh.visible && d.c === pacman.x && d.r === pacman.z) {
+                    d.mesh.visible = false;
+                    pacman.score += 10;
+                    dotsEaten++;
+                }
+            });
+
+            // Update Ghosts positions
+            ghosts.forEach((g, idx) => {
+                // Basic AI for non-player-controlled directions if standing still
+                if (g.dirX === 0 && g.dirZ === 0) {
+                    const dirs = [{x: 0, z: -1}, {x: 0, z: 1}, {x: -1, z: 0}, {x: 1, z: 0}];
+                    const valid = dirs.filter(d => canMoveTo(g.x + d.x, g.z + d.z));
+                    if (valid.length > 0) {
+                        const rDir = valid[Math.floor(Math.random() * valid.length)];
+                        g.dirX = rDir.x;
+                        g.dirZ = rDir.z;
+                    }
+                }
+
+                if (canMoveTo(g.x + g.dirX, g.z + g.dirZ)) {
+                    g.x += g.dirX;
+                    g.z += g.dirZ;
+                } else {
+                    g.dirX = 0;
+                    g.dirZ = 0;
+                }
+
+                // Collision with Pac-Man
+                if (g.x === pacman.x && g.z === pacman.z) {
+                    endGame(false); // Ghosts win
+                }
+            });
+
+            if (dotsEaten >= totalDots && totalDots > 0) {
+                endGame(true); // Pac-Man wins
+            }
+
+            updateVisualPositions();
+            updateHUD();
+        }
+
+        function endGame(pacmanWon) {
+            gameState = 'GAMEOVER';
+            let winner = '';
+            if (pacmanWon) {
+                winner = p1Role === 'PACMAN' ? 'Player 1 (Pac-Man) Wins!' : 'Player 2 (Pac-Man) Wins!';
+            } else {
+                winner = p1Role === 'GHOSTS' ? 'Player 1 (Ghosts) Wins!' : 'Player 2 (Ghosts) Wins!';
+            }
+
+            document.getElementById('winner-announcement').innerText = winner;
+            document.getElementById('final-scores').innerText = `Final Score - Pac-Man: ${pacman.score} | Dots Remaining: ${totalDots - dotsEaten}`;
+            showOverlay(document.getElementById('game-over-menu'));
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- MAIN LOOP ---
+        function animate(timestamp) {
+            requestAnimationFrame(animate);
+
+            if (gameState === 'PLAYING') {
+                if (timestamp - lastMoveTime > moveInterval) {
+                    gameTick();
+                    lastMoveTime = timestamp;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Initialize & Run
+        initThree();
+        showOverlay(document.getElementById('main-menu'));
+        requestAnimationFrame(animate);
+    </script>
 </body>
 </html>
