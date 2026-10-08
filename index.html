@@ -79,7 +79,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      width: 80%;
+      width: 85%;
       margin: 10px 0;
     }
 
@@ -91,7 +91,7 @@
       color: #fff;
       font-weight: bold;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
     }
 
     .menu-item.selected {
@@ -306,17 +306,18 @@
       <h2 id="overlay-title">3D Pac-Man</h2>
       
       <div id="menu-view" class="menu-options">
-        <div class="menu-item selected" onclick="selectMenuItem(0)">1. Start 2P Game</div>
+        <div class="menu-item selected" onclick="selectMenuItem(0)">1. Start Game</div>
         <div class="menu-item" onclick="selectMenuItem(1)">2. Instructions</div>
+        <div class="menu-item" onclick="selectMenuItem(2)">3. Exit Game</div>
       </div>
 
       <div id="instructions-view" class="instructions-card">
         <strong>🎮 2-Player In-Game Instructions:</strong><br/>
-        • <strong>Player 1</strong>: W/A/S/D to move. Press <strong>'1'</strong> to toggle control focus to Ghost.<br/>
-        • <strong>Player 2</strong>: UP/DOWN/LEFT/RIGHT to move. Press <strong>'2'</strong> to switch target control.<br/>
-        • <strong>Spacebar</strong>: Pause/Resume game anytime.<br/>
-        • <strong>ALT + 3</strong>: Cycle 3D Camera Views.<br/>
-        • <strong>Goal</strong>: Pac-Man eats ASL Hands ✋ & Strawberries 🍓. Ghost chases Pac-Man!
+        • <strong>Player 1</strong>: W(UP), S(DOWN), A(LEFT), D(RIGHT). Toggle Ghosts with <strong>1</strong>.<br/>
+        • <strong>Player 2</strong>: UP, DOWN, LEFT, RIGHT. Toggle Ghosts with <strong>M</strong>.<br/>
+        • <strong>Spacebar</strong>: Pause game anytime (Restart / Exit).<br/>
+        • <strong>Menu Nav</strong>: Arrow Keys (UP/DOWN) & Enter.<br/>
+        • <strong>Green Button</strong>: Select / Confirm at bottom right.
       </div>
 
       <div class="username-box" id="username-container">
@@ -337,7 +338,7 @@
   </div>
 
   <div class="fact-banner" id="fact-display">
-    P1: WASD | P2: Arrows | Press SPACE to Pause!
+    P1: WASD (Key 1) | P2: Arrows (Key M) | SPACE: Pause
   </div>
 
   <div class="controls">
@@ -351,8 +352,8 @@
 
   <div class="outer-dashboard">
     <div class="stats-card">
-      <div><strong>P1 Target:</strong> <span id="stat-p1">Pac-Man</span></div>
-      <div><strong>P2 Target:</strong> <span id="stat-p2">Ghost</span></div>
+      <div><strong>P1 Target:</strong> <span id="stat-p1">PACMAN</span></div>
+      <div><strong>P2 Target:</strong> <span id="stat-p2">GHOST</span></div>
       <div><strong>Wins:</strong> <span id="stat-wins">0</span></div>
       <div><strong>Losses:</strong> <span id="stat-losses">0</span></div>
     </div>
@@ -417,7 +418,7 @@
 
     let selectedMenuIndex = 0;
 
-    // Player controls assignment
+    // Control Mapping: Key 1 toggles P1, Key M toggles P2
     let p1Control = 'PACMAN'; // 'PACMAN' or 'GHOST'
     let p2Control = 'GHOST';  // 'GHOST' or 'PACMAN'
 
@@ -660,6 +661,10 @@
         startGame();
       } else if (selectedMenuIndex === 1) {
         selectMenuItem(0); // Jump back to Start Game
+      } else if (selectedMenuIndex === 2) {
+        overlayTitle.innerText = "Game Exited";
+        menuView.style.display = 'flex';
+        overlay.style.display = 'flex';
       }
     }
 
@@ -870,15 +875,14 @@
         localStorage.setItem('asl_total_wins', totalWins);
         saveScoreToLeaderboard(playerName, score, 'PACMAN WIN');
         overlayTitle.innerText = "🏆 Victory!";
-        overlayMsg.innerText = `Winning Player: ${winningPlayer}\nFinal Score: ${score}`;
       } else {
         totalLosses += 1;
         localStorage.setItem('asl_total_losses', totalLosses);
         saveScoreToLeaderboard(playerName, score, 'GHOST WIN');
         overlayTitle.innerText = "👻 Game Over!";
-        overlayMsg.innerText = `Winning Player: ${winningPlayer}\nFinal Score: ${score}`;
       }
 
+      factDisplay.innerText = `Game Over! Winner: ${winningPlayer} | Final Score: ${score}`;
       updateStatsUI();
       menuView.style.display = 'flex';
       overlay.style.display = 'flex';
@@ -886,13 +890,13 @@
 
     // --- Key Event Listeners ---
     window.addEventListener('keydown', (e) => {
-      // Menu Navigation Keys (UP / DOWN / ENTER / SPACE)
+      // Menu Navigation Keys (UP / DOWN / ENTER)
       if (overlay.style.display !== 'none') {
         if (e.key === 'ArrowUp') {
           selectMenuItem(Math.max(0, selectedMenuIndex - 1));
           e.preventDefault();
         } else if (e.key === 'ArrowDown') {
-          selectMenuItem(Math.min(1, selectedMenuIndex + 1));
+          selectMenuItem(Math.min(2, selectedMenuIndex + 1));
           e.preventDefault();
         } else if (e.key === 'Enter') {
           confirmMenuSelection();
@@ -900,7 +904,7 @@
         }
       }
 
-      // Spacebar Pause Toggle
+      // Spacebar Pause Toggle (Restart / Exit option)
       if (e.key === ' ' || e.code === 'Space') {
         pauseGame();
         e.preventDefault();
@@ -908,12 +912,14 @@
 
       if (e.altKey && e.key === '3') { cycleCameraMode(); e.preventDefault(); }
 
-      // 1 & 2 Target Control Switching
+      // Target Control Switching:
+      // Player 1 switches with Key '1'
       if (e.key === '1') {
         p1Control = (p1Control === 'PACMAN') ? 'GHOST' : 'PACMAN';
         updateStatsUI();
       }
-      if (e.key === '2') {
+      // Player 2 switches with Key 'M' or 'm'
+      if (e.key === 'm' || e.key === 'M') {
         p2Control = (p2Control === 'GHOST') ? 'PACMAN' : 'GHOST';
         updateStatsUI();
       }
