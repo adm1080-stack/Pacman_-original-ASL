@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ASL Pac-Man - Deaf Culture Edition (3D JavaFX Style)</title>
+  <title>ASL Pac-Man - Deaf Culture Edition (3D Arcade)</title>
   <style>
     :root {
       --bg-color: #0f172a;
@@ -227,11 +227,47 @@
     }
   </style>
 
-  <!-- Three.js WebGL Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
   <header>
     <h1>ASL Pac-Man 3D</h1>
-    <p>Collect ASL Hands ✋ & Strawberries 🍓 in
+    <p>Collect ASL Hands ✋ & Strawberries 🍓 in 3D WebGL Mode!</p>
+  </header>
+
+  <div id="game-container">
+    <canvas id="pacmanCanvas" width="330" height="330"></canvas>
+    <div id="webgl-container"></div>
+    
+    <div id="overlay">
+      <h2 id="overlay-title">ASL Pac-Man 3D</h2>
+      <p id="overlay-msg">Use Arrow keys / WASD or buttons to move!</p>
+
+      <div class="username-box" id="username-container">
+        <label for="player-username">Player Name (Guest Mode):</label>
+        <input type="text" id="player-username" placeholder="Guest" maxlength="15" />
+      </div>
+
+      <button class="btn" onclick="startGame()">Start Game</button>
+    </div>
+  </div>
+
+  <div id="camera-indicator">Camera Mode: Isometric Arcade (3D Active)</div>
+
+  <div class="action-row">
+    <button class="btn" onclick="toggle3DView()">🎮 Toggle 2D / 3D</button>
+    <button class="btn" onclick="cycleCameraMode()">🎥 Perspective (ALT+3)</button>
+    <button class="btn pause-btn" onclick="pauseGame()">Pause / Menu</button>
+  </div>
+
+  <div class="fact-banner" id="fact-display">
+    Collect all ASL Hands ✋ & Strawberries 🍓 to win!
+  </div>
+
+  <div class="controls">
+    <div></div>
+    <button class="ctrl-btn" onclick="movePacman(0, -1)">▲</button>
+    <div></div>
+    <button class="ctrl-btn" onclick="movePacman(-1, 0)">◀</button>
+    <button class="ctrl
