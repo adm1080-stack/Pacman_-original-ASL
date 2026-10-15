@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Pac-Man Two-Player</title>
+    <title>3D Pac-Man - Direct Controls</title>
     <style>
         body {
             margin: 0;
@@ -21,38 +21,23 @@
             display: block;
         }
 
-        .ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            box-sizing: border-box;
-            padding: 20px;
-        }
-
         .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            font-size: 20px;
+            align-items: center;
+            font-size: 24px;
             font-weight: bold;
-            text-shadow: 2px 2px 4px #000;
+            pointer-events: none;
+            z-index: 5;
+            text-shadow: 0 0 10px #000, 2px 2px 4px #000;
         }
 
-        .hud-card {
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid #333;
-            padding: 10px 20px;
-            border-radius: 8px;
-        }
-
-        .hud-p1 { border-color: #ff0; color: #ff0; }
-        .hud-p2 { border-color: #f00; color: #f00; }
+        .lives { color: #f00; }
+        .score { color: #fff; }
 
         .overlay {
             position: absolute;
@@ -60,7 +45,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -69,606 +54,179 @@
             z-index: 10;
         }
 
-        .menu-title {
+        .title {
             font-size: 48px;
             color: #ff0;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             text-transform: uppercase;
             letter-spacing: 4px;
-            text-shadow: 0 0 10px #ff0;
+            text-shadow: 0 0 15px #ff0;
         }
 
-        .menu-options {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            width: 300px;
-        }
-
-        .menu-btn {
+        .btn {
             background: #111;
-            color: #fff;
-            border: 2px solid #444;
-            padding: 12px 24px;
-            font-size: 20px;
-            text-align: center;
-            border-radius: 5px;
+            color: #ff0;
+            border: 2px solid #ff0;
+            padding: 14px 32px;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 8px;
             cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
             transition: all 0.2s;
         }
 
-        .menu-btn.selected {
-            border-color: #ff0;
-            background: #222;
-            color: #ff0;
-            transform: scale(1.05);
-            box-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
-        }
-
-        .green-action-btn {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: #0f0;
-            border: none;
-            box-shadow: 0 0 15px #0f0;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
+        .btn:hover {
+            background: #ff0;
             color: #000;
-            font-size: 16px;
-            pointer-events: auto;
-            transition: transform 0.2s, box-shadow 0.2s;
-            z-index: 20;
+            box-shadow: 0 0 20px rgba(255, 255, 0, 0.8);
+            transform: scale(1.05);
         }
 
-        .green-action-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 25px #0f0;
-        }
-
-        .instructions-panel {
-            background: #111;
-            border: 2px solid #555;
-            padding: 25px;
-            border-radius: 10px;
-            max-width: 600px;
-            font-size: 16px;
-            line-height: 1.6;
-            margin-bottom: 20px;
-        }
-
-        .instructions-panel h2 {
-            color: #ff0;
-            margin-top: 0;
-        }
-
-        .instructions-panel ul {
-            text-align: left;
-            padding-left: 20px;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .p1-color { color: #ff0; }
-        .p2-color { color: #ff4444; }
+        .hidden { display: none !important; }
     </style>
-    <!-- Three.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
     <div id="canvas-container"></div>
 
-    <div class="ui-layer">
-        <div class="hud">
-            <div class="hud-card hud-p1">
-                <div>PLAYER 1</div>
-                <div id="p1-role">Role: Pac-Man</div>
-                <div id="p1-score">Score: 0</div>
-            </div>
-            <div class="hud-card hud-p2">
-                <div>PLAYER 2</div>
-                <div id="p2-role">Role: Ghosts</div>
-                <div id="p2-score">Score: 0</div>
-            </div>
-        </div>
+    <div class="hud">
+        <div class="lives" id="hud-lives">Lives: 3</div>
+        <div class="score" id="hud-score">Score: 0</div>
     </div>
 
-    <!-- Main Menu Overlay -->
-    <div id="main-menu" class="overlay">
-        <div class="menu-title">3D Pac-Man 2P</div>
-        <div class="menu-options">
-            <div class="menu-btn selected" data-action="start">Start Game</div>
-            <div class="menu-btn" data-action="instructions">Instructions</div>
-        </div>
+    <div id="start-screen" class="overlay">
+        <div class="title">3D Pac-Man</div>
+        <p style="color: #aaa; margin-bottom: 30px; font-size: 18px;">Use <b>WASD</b> or <b>ARROW KEYS</b> to move Pac-Man</p>
+        <button class="btn" id="start-btn">PLAY NOW</button>
     </div>
 
-    <!-- Instructions Menu Overlay -->
-    <div id="instructions-menu" class="overlay hidden">
-        <div class="instructions-panel">
-            <h2>Game Instructions</h2>
-            <ul>
-                <li><strong>Player 1:</strong> Control active character using <span class="p1-color">W (Up), S (Down), A (Left), D (Right)</span>. Switch ghost control by pressing <span class="p1-color">1</span>.</li>
-                <li><strong>Player 2:</strong> Control active character using <span class="p2-color">ARROW KEYS</span>. Switch ghost control by pressing <span class="p2-color">M</span>.</li>
-                <li><strong>Menu Navigation:</strong> UP / DOWN arrows to navigate, ENTER to select. Mouse click green button at bottom-right to select highlighted option.</li>
-                <li><strong>Pause Menu:</strong> Press <span class="p1-color">SPACE BAR</span> anytime to pause, restart, or exit.</li>
-            </ul>
-        </div>
-        <div class="menu-options">
-            <div class="menu-btn selected" data-action="back">Back to Menu</div>
-        </div>
+    <div id="gameover-screen" class="overlay hidden">
+        <div class="title" id="gameover-title" style="color: #f00;">GAME OVER</div>
+        <p id="gameover-score" style="font-size: 20px; margin-bottom: 30px;"></p>
+        <button class="btn" id="restart-btn">PLAY AGAIN</button>
     </div>
-
-    <!-- Pause Menu Overlay -->
-    <div id="pause-menu" class="overlay hidden">
-        <div class="menu-title">Game Paused</div>
-        <div class="menu-options">
-            <div class="menu-btn selected" data-action="resume">Resume</div>
-            <div class="menu-btn" data-action="restart">Restart</div>
-            <div class="menu-btn" data-action="exit">Exit to Menu</div>
-        </div>
-    </div>
-
-    <!-- Game Over Overlay -->
-    <div id="game-over-menu" class="overlay hidden">
-        <div class="menu-title" id="game-over-title">Game Over</div>
-        <div class="instructions-panel" style="text-align: center;">
-            <h3 id="winner-announcement" style="color: #0f0; font-size: 24px;"></h3>
-            <p id="final-scores"></p>
-        </div>
-        <div class="menu-options">
-            <div class="menu-btn selected" data-action="restart">Play Again</div>
-            <div class="menu-btn" data-action="exit">Main Menu</div>
-        </div>
-    </div>
-
-    <!-- Green Select Button -->
-    <button id="green-btn" class="green-action-btn">SELECT</button>
 
     <script>
-        // --- GAME CONFIG & GLOBALS ---
-        const GRID_SIZE = 19;
-        const CELL_SIZE = 2;
-        
-        // Open field configuration: outer boundary walls only
-        const MAP_DATA = Array.from({ length: 20 }, (_, r) => 
-            Array.from({ length: 19 }, (_, c) => 
-                (r === 0 || r === 19 || c === 0 || c === 18) ? 1 : 0
-            )
-        );
-
-        let gameState = 'MENU'; // MENU, INSTRUCTIONS, PLAYING, PAUSED, GAMEOVER
-        let scene, camera, renderer;
-        let p1Role = 'PACMAN'; // PACMAN or GHOSTS
-        let p2Role = 'GHOSTS';
-
-        let pacman = { x: 9, z: 15, dirX: 0, dirZ: 0, nextDirX: 0, nextDirZ: 0, mesh: null, mouth: null, score: 0 };
-        let ghosts = [
-            { id: 0, x: 8, z: 9, color: 0xff0000, dirX: 0, dirZ: 0, mesh: null, active: true },
-            { id: 1, x: 9, z: 9, color: 0xffb8ff, dirX: 0, dirZ: 0, mesh: null, active: false },
-            { id: 2, x: 10, z: 9, color: 0x00ffff, dirX: 0, dirZ: 0, mesh: null, active: false },
-            { id: 3, x: 9, z: 8, color: 0xffb852, dirX: 0, dirZ: 0, mesh: null, active: false }
+        // Maze Map: 1 = Wall, 0 = Dot, 2 = Empty, 3 = Power Pellet
+        const MAP_DATA = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+            [1,3,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,3,1],
+            [1,0,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,0,1],
+            [1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1],
+            [1,1,1,1,0,1,1,1,2,1,2,1,1,1,0,1,1,1,1],
+            [2,2,2,1,0,1,2,2,2,2,2,2,2,1,0,1,2,2,2],
+            [1,1,1,1,0,1,2,1,1,2,1,1,2,1,0,1,1,1,1],
+            [2,2,2,2,0,2,2,1,2,2,2,1,2,2,0,2,2,2,2],
+            [1,1,1,1,0,1,2,1,1,1,1,1,2,1,0,1,1,1,1],
+            [2,2,2,1,0,1,2,2,2,2,2,2,2,1,0,1,2,2,2],
+            [1,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+            [1,3,0,1,0,0,0,0,0,2,0,0,0,0,0,1,0,3,1],
+            [1,1,0,1,0,1,0,1,1,1,1,1,0,1,0,1,0,1,1],
+            [1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
-        let p1GhostIdx = 0;
-        let p2GhostIdx = 0;
+        const GRID_ROWS = MAP_DATA.length;
+        const GRID_COLS = MAP_DATA[0].length;
+        const CELL_SIZE = 2;
+        const SPEED = 5.5; // Units per second
 
-        let dots = [];
-        let totalDots = 0;
-        let dotsEaten = 0;
+        let scene, camera, renderer;
+        let isPlaying = false;
+        let lives = 3, score = 0;
+        let dotsRemaining = 0;
 
-        let moveInterval = 250; // ms per grid move
-        let lastMoveTime = 0;
+        // Pac-Man State
+        let pacman = {
+            x: 9 * CELL_SIZE,
+            z: 15 * CELL_SIZE,
+            gridX: 9,
+            gridZ: 15,
+            dirX: 0,
+            dirZ: 0,
+            reqDirX: 0,
+            reqDirZ: 0,
+            mesh: null,
+            topMouth: null,
+            bottomMouth: null
+        };
 
-        // Key states
-        const keys = {};
+        // Ghosts State
+        let ghosts = [
+            { id: 0, x: 8*CELL_SIZE, z: 9*CELL_SIZE, gridX: 8, gridZ: 9, dirX: 0, dirZ: -1, color: 0xffffff, mesh: null },
+            { id: 1, x: 9*CELL_SIZE, z: 9*CELL_SIZE, gridX: 9, gridZ: 9, dirX: 0, dirZ: 1, color: 0xffffff, mesh: null },
+            { id: 2, x: 10*CELL_SIZE, z: 9*CELL_SIZE, gridX: 10, gridZ: 9, dirX: 1, dirZ: 0, color: 0xffffff, mesh: null }
+        ];
 
-        // --- MENU NAVIGATION SYSTEM ---
-        let currentMenuOverlay = document.getElementById('main-menu');
-        let selectedMenuIndex = 0;
+        let dotsMap = [];
 
-        function getVisibleButtons() {
-            if (!currentMenuOverlay) return [];
-            return Array.from(currentMenuOverlay.querySelectorAll('.menu-btn'));
-        }
-
-        function updateMenuSelection() {
-            const btns = getVisibleButtons();
-            btns.forEach((btn, idx) => {
-                if (idx === selectedMenuIndex) {
-                    btn.classList.add('selected');
-                } else {
-                    btn.classList.remove('selected');
-                }
-            });
-        }
-
-        function navigateMenu(dir) {
-            const btns = getVisibleButtons();
-            if (btns.length === 0) return;
-            selectedMenuIndex = (selectedMenuIndex + dir + btns.length) % btns.length;
-            updateMenuSelection();
-        }
-
-        function triggerMenuSelection() {
-            const btns = getVisibleButtons();
-            if (btns[selectedMenuIndex]) {
-                const action = btns[selectedMenuIndex].getAttribute('data-action');
-                handleMenuAction(action);
-            }
-        }
-
-        function handleMenuAction(action) {
-            if (action === 'start') {
-                showOverlay(null);
-                startGame();
-            } else if (action === 'instructions') {
-                showOverlay(document.getElementById('instructions-menu'));
-            } else if (action === 'back' || action === 'exit') {
-                showOverlay(document.getElementById('main-menu'));
-                gameState = 'MENU';
-            } else if (action === 'resume') {
-                showOverlay(null);
-                gameState = 'PLAYING';
-            } else if (action === 'restart') {
-                showOverlay(null);
-                startGame();
-            }
-        }
-
-        function showOverlay(overlayElem) {
-            document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
-            currentMenuOverlay = overlayElem;
-            selectedMenuIndex = 0;
-            if (overlayElem) {
-                overlayElem.classList.remove('hidden');
-                updateMenuSelection();
-            }
-        }
-
-        // --- THREE.JS SETUP ---
-        function initThree() {
+        function init() {
             const container = document.getElementById('canvas-container');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050505);
+            scene.background = new THREE.Color(0x000000);
 
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            
-            // Positioning Isometric High-angle camera
-            camera.position.set(GRID_SIZE * CELL_SIZE / 2, 35, GRID_SIZE * CELL_SIZE + 10);
-            camera.lookAt(GRID_SIZE * CELL_SIZE / 2, 0, GRID_SIZE * CELL_SIZE / 2 - 2);
+            // Orthographic-like Isometric Camera
+            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set((GRID_COLS * CELL_SIZE)/2 - CELL_SIZE/2, 45, (GRID_ROWS * CELL_SIZE)/2 + 22);
+            camera.lookAt((GRID_COLS * CELL_SIZE)/2 - CELL_SIZE/2, 0, (GRID_ROWS * CELL_SIZE)/2 - 2);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             container.appendChild(renderer.domElement);
 
             // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
+            const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambient);
 
             const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
             dirLight.position.set(10, 40, 20);
-            dirLight.castShadow = true;
             scene.add(dirLight);
 
-            buildBoard();
+            buildMaze();
+            buildPacman();
+            buildGhosts();
 
             window.addEventListener('resize', onWindowResize);
+            window.addEventListener('keydown', handleKeyDown);
+
+            document.getElementById('start-btn').addEventListener('click', startGame);
+            document.getElementById('restart-btn').addEventListener('click', startGame);
         }
 
-        function buildBoard() {
-            // Base floor
-            const floorGeo = new THREE.PlaneGeometry(GRID_SIZE * CELL_SIZE, MAP_DATA.length * CELL_SIZE);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            floor.position.set((GRID_SIZE * CELL_SIZE)/2 - CELL_SIZE/2, -0.5, (MAP_DATA.length * CELL_SIZE)/2 - CELL_SIZE/2);
-            scene.add(floor);
-
-            // Outer Boundary Walls & Pellets
+        function buildMaze() {
             const wallGeo = new THREE.BoxGeometry(CELL_SIZE, 1.2, CELL_SIZE);
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x0000ff, roughness: 0.4 });
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x0000a5, roughness: 0.3 });
 
-            const dotGeo = new THREE.SphereGeometry(0.2, 8, 8);
-            const dotMat = new THREE.MeshBasicMaterial({ color: 0xffb8ae });
+            const dotGeo = new THREE.TorusGeometry(0.18, 0.06, 8, 16);
+            const dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-            for (let r = 0; r < MAP_DATA.length; r++) {
-                for (let c = 0; c < MAP_DATA[r].length; c++) {
+            const powerGeo = new THREE.SphereGeometry(0.35, 16, 16);
+            const powerMat = new THREE.MeshBasicMaterial({ color: 0x4488ff });
+
+            dotsMap = Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(null));
+
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
                     const val = MAP_DATA[r][c];
-                    const x = c * CELL_SIZE;
-                    const z = r * CELL_SIZE;
+                    const posX = c * CELL_SIZE;
+                    const posZ = r * CELL_SIZE;
 
                     if (val === 1) {
                         const wall = new THREE.Mesh(wallGeo, wallMat);
-                        wall.position.set(x, 0.1, z);
+                        wall.position.set(posX, 0.1, posZ);
                         scene.add(wall);
                     } else if (val === 0) {
                         const dot = new THREE.Mesh(dotGeo, dotMat);
-                        dot.position.set(x, 0, z);
+                        dot.rotation.x = Math.PI / 2;
+                        dot.position.set(posX, 0, posZ);
                         scene.add(dot);
-                        dots.push({ r, c, mesh: dot });
-                        totalDots++;
-                    }
-                }
-            }
-
-            // Pac-Man Creation
-            const pacGeo = new THREE.SphereGeometry(0.8, 16, 16);
-            const pacMat = new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.2 });
-            pacman.mesh = new THREE.Mesh(pacGeo, pacMat);
-            scene.add(pacman.mesh);
-
-            // Ghosts Creation
-            ghosts.forEach(g => {
-                const gGroup = new THREE.Group();
-                const headGeo = new THREE.SphereGeometry(0.7, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-                const bodyGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.7, 16);
-                const gMat = new THREE.MeshStandardMaterial({ color: g.color, roughness: 0.3 });
-
-                const head = new THREE.Mesh(headGeo, gMat);
-                head.position.y = 0.35;
-                const body = new THREE.Mesh(bodyGeo, gMat);
-
-                gGroup.add(head);
-                gGroup.add(body);
-
-                // Indicator light/ring
-                const ringGeo = new THREE.RingGeometry(0.8, 1.0, 16);
-                const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-                const ring = new THREE.Mesh(ringGeo, ringMat);
-                ring.rotation.x = Math.PI/2;
-                ring.position.y = -0.45;
-                ring.name = "indicator";
-                ring.visible = false;
-                gGroup.add(ring);
-
-                scene.add(gGroup);
-                g.mesh = gGroup;
-            });
-        }
-
-        function resetPositions() {
-            pacman.x = 9;
-            pacman.z = 16;
-            pacman.dirX = 0;
-            pacman.dirZ = 0;
-            pacman.nextDirX = 0;
-            pacman.nextDirZ = 0;
-
-            const initGPositions = [
-                {x: 8, z: 9}, {x: 9, z: 9}, {x: 10, z: 9}, {x: 9, z: 8}
-            ];
-
-            ghosts.forEach((g, idx) => {
-                g.x = initGPositions[idx].x;
-                g.z = initGPositions[idx].y || initGPositions[idx].z;
-                g.dirX = 0;
-                g.dirZ = 0;
-            });
-
-            updateVisualPositions();
-        }
-
-        function updateVisualPositions() {
-            pacman.mesh.position.set(pacman.x * CELL_SIZE, 0.3, pacman.z * CELL_SIZE);
-            ghosts.forEach((g, idx) => {
-                g.mesh.position.set(g.x * CELL_SIZE, 0.3, g.z * CELL_SIZE);
-                const ind = g.mesh.getObjectByName("indicator");
-                if (ind) {
-                    ind.visible = (p1Role === 'GHOSTS' && p1GhostIdx === idx) || (p2Role === 'GHOSTS' && p2GhostIdx === idx);
-                }
-            });
-        }
-
-        function startGame() {
-            pacman.score = 0;
-            dotsEaten = 0;
-            dots.forEach(d => d.mesh.visible = true);
-            resetPositions();
-            gameState = 'PLAYING';
-            updateHUD();
-        }
-
-        function updateHUD() {
-            document.getElementById('p1-role').innerText = `Role: ${p1Role === 'PACMAN' ? 'Pac-Man' : 'Ghosts'}`;
-            document.getElementById('p2-role').innerText = `Role: ${p2Role === 'PACMAN' ? 'Pac-Man' : 'Ghosts'}`;
-            
-            const pacScore = pacman.score;
-            const ghostScore = dotsEaten * 10; // Simple score for ghosts defending
-
-            if (p1Role === 'PACMAN') {
-                document.getElementById('p1-score').innerText = `Score: ${pacScore}`;
-                document.getElementById('p2-score').innerText = `Score: ${ghostScore}`;
-            } else {
-                document.getElementById('p1-score').innerText = `Score: ${ghostScore}`;
-                document.getElementById('p2-score').innerText = `Score: ${pacScore}`;
-            }
-        }
-
-        // --- INPUT HANDLING ---
-        window.addEventListener('keydown', (e) => {
-            const key = e.key;
-
-            if (gameState === 'MENU' || gameState === 'INSTRUCTIONS' || gameState === 'PAUSED' || gameState === 'GAMEOVER') {
-                if (key === 'ArrowUp') navigateMenu(-1);
-                if (key === 'ArrowDown') navigateMenu(1);
-                if (key === 'Enter') triggerMenuSelection();
-            }
-
-            if (key === ' ' || e.code === 'Space') {
-                if (gameState === 'PLAYING') {
-                    gameState = 'PAUSED';
-                    showOverlay(document.getElementById('pause-menu'));
-                } else if (gameState === 'PAUSED') {
-                    gameState = 'PLAYING';
-                    showOverlay(null);
-                }
-            }
-
-            if (gameState !== 'PLAYING') return;
-
-            // Player 1 Control: WASD + '1'
-            if (p1Role === 'PACMAN') {
-                if (key === 'w' || key === 'W') setPacmanDir(0, -1);
-                if (key === 's' || key === 'S') setPacmanDir(0, 1);
-                if (key === 'a' || key === 'A') setPacmanDir(-1, 0);
-                if (key === 'd' || key === 'D') setPacmanDir(1, 0);
-            } else { // P1 is Ghosts
-                if (key === 'w' || key === 'W') setGhostDir(p1GhostIdx, 0, -1);
-                if (key === 's' || key === 'S') setGhostDir(p1GhostIdx, 0, 1);
-                if (key === 'a' || key === 'A') setGhostDir(p1GhostIdx, -1, 0);
-                if (key === 'd' || key === 'D') setGhostDir(p1GhostIdx, 1, 0);
-                if (key === '1') {
-                    p1GhostIdx = (p1GhostIdx + 1) % ghosts.length;
-                    updateVisualPositions();
-                }
-            }
-
-            // Player 2 Control: ARROWS + 'm'/'M'
-            if (p2Role === 'PACMAN') {
-                if (key === 'ArrowUp') setPacmanDir(0, -1);
-                if (key === 'ArrowDown') setPacmanDir(0, 1);
-                if (key === 'ArrowLeft') setPacmanDir(-1, 0);
-                if (key === 'ArrowRight') setPacmanDir(1, 0);
-            } else { // P2 is Ghosts
-                if (key === 'ArrowUp') setGhostDir(p2GhostIdx, 0, -1);
-                if (key === 'ArrowDown') setGhostDir(p2GhostIdx, 0, 1);
-                if (key === 'ArrowLeft') setGhostDir(p2GhostIdx, -1, 0);
-                if (key === 'ArrowRight') setGhostDir(p2GhostIdx, 1, 0);
-                if (key === 'm' || key === 'M') {
-                    p2GhostIdx = (p2GhostIdx + 1) % ghosts.length;
-                    updateVisualPositions();
-                }
-            }
-        });
-
-        // Green button mouse selection click
-        document.getElementById('green-btn').addEventListener('click', () => {
-            if (gameState === 'MENU' || gameState === 'INSTRUCTIONS' || gameState === 'PAUSED' || gameState === 'GAMEOVER') {
-                triggerMenuSelection();
-            }
-        });
-
-        function setPacmanDir(dx, dz) {
-            pacman.nextDirX = dx;
-            pacman.nextDirZ = dz;
-        }
-
-        function setGhostDir(idx, dx, dz) {
-            if (ghosts[idx]) {
-                ghosts[idx].dirX = dx;
-                ghosts[idx].dirZ = dz;
-            }
-        }
-
-        function canMoveTo(x, z) {
-            if (z < 0 || z >= MAP_DATA.length || x < 0 || x >= MAP_DATA[0].length) return false;
-            return MAP_DATA[z][x] !== 1;
-        }
-
-        // --- GAME LOGIC TICK ---
-        function gameTick() {
-            // Update Pacman position
-            if (canMoveTo(pacman.x + pacman.nextDirX, pacman.z + pacman.nextDirZ)) {
-                pacman.dirX = pacman.nextDirX;
-                pacman.dirZ = pacman.nextDirZ;
-            }
-
-            if (canMoveTo(pacman.x + pacman.dirX, pacman.z + pacman.dirZ)) {
-                pacman.x += pacman.dirX;
-                pacman.z += pacman.dirZ;
-            }
-
-            // Check Dot Collision
-            dots.forEach(d => {
-                if (d.mesh.visible && d.c === pacman.x && d.r === pacman.z) {
-                    d.mesh.visible = false;
-                    pacman.score += 10;
-                    dotsEaten++;
-                }
-            });
-
-            // Update Ghosts positions
-            ghosts.forEach((g, idx) => {
-                // Basic AI for non-player-controlled directions if standing still
-                if (g.dirX === 0 && g.dirZ === 0) {
-                    const dirs = [{x: 0, z: -1}, {x: 0, z: 1}, {x: -1, z: 0}, {x: 1, z: 0}];
-                    const valid = dirs.filter(d => canMoveTo(g.x + d.x, g.z + d.z));
-                    if (valid.length > 0) {
-                        const rDir = valid[Math.floor(Math.random() * valid.length)];
-                        g.dirX = rDir.x;
-                        g.dirZ = rDir.z;
-                    }
-                }
-
-                if (canMoveTo(g.x + g.dirX, g.z + g.dirZ)) {
-                    g.x += g.dirX;
-                    g.z += g.dirZ;
-                } else {
-                    g.dirX = 0;
-                    g.dirZ = 0;
-                }
-
-                // Collision with Pac-Man
-                if (g.x === pacman.x && g.z === pacman.z) {
-                    endGame(false); // Ghosts win
-                }
-            });
-
-            if (dotsEaten >= totalDots && totalDots > 0) {
-                endGame(true); // Pac-Man wins
-            }
-
-            updateVisualPositions();
-            updateHUD();
-        }
-
-        function endGame(pacmanWon) {
-            gameState = 'GAMEOVER';
-            let winner = '';
-            if (pacmanWon) {
-                winner = p1Role === 'PACMAN' ? 'Player 1 (Pac-Man) Wins!' : 'Player 2 (Pac-Man) Wins!';
-            } else {
-                winner = p1Role === 'GHOSTS' ? 'Player 1 (Ghosts) Wins!' : 'Player 2 (Ghosts) Wins!';
-            }
-
-            document.getElementById('winner-announcement').innerText = winner;
-            document.getElementById('final-scores').innerText = `Final Score - Pac-Man: ${pacman.score} | Dots Remaining: ${totalDots - dotsEaten}`;
-            showOverlay(document.getElementById('game-over-menu'));
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        // --- MAIN LOOP ---
-        function animate(timestamp) {
-            requestAnimationFrame(animate);
-
-            if (gameState === 'PLAYING') {
-                if (timestamp - lastMoveTime > moveInterval) {
-                    gameTick();
-                    lastMoveTime = timestamp;
-                }
-            }
-
-            renderer.render(scene, camera);
-        }
-
-        // Initialize & Run
-        initThree();
-        showOverlay(document.getElementById('main-menu'));
-        requestAnimationFrame(animate);
-    </script>
-</body>
-</html>
+                        dotsMap[r][c] = { mesh: dot, isPower: false };
+                        dotsRemaining++;
+                    } else if (val === 3) {
+                        const
